@@ -2,7 +2,7 @@
 "use client";
 
 import type { List as ListType, Task } from "@/lib/types";
-import { TaskCard } from "./TaskCard"; // Changed from Card to TaskCard
+import { TaskCard } from "./TaskCard";
 import { Button } from "@/components/ui/button";
 import { PlusSquare, Menu, Trash2, Palette } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,7 +16,7 @@ import {
 import React, { useRef } from 'react';
 import { cn } from "@/lib/utils";
 
-interface KanbanListProps { // Renamed from ListProps
+interface KanbanListProps {
   list: ListType;
   swimlaneId: string;
   tasks: Task[];
@@ -41,15 +41,15 @@ interface KanbanListProps { // Renamed from ListProps
   onListDragOver: (event: React.DragEvent<HTMLDivElement>, targetListId: string) => void; 
 }
 
-export function KanbanList({ // Renamed from List
+export function KanbanList({
   list,
   swimlaneId,
   tasks,
   onAddTask,
   
   onDropTask,
-  onDragTaskStart, // Prop name for starting task drag
-  onDragTaskEnd,   // Prop name for ending task drag
+  onDragTaskStart,
+  onDragTaskEnd,
   draggingTaskId,
   dropIndicator,
   onTaskDragOverList,
@@ -59,10 +59,10 @@ export function KanbanList({ // Renamed from List
   onSetTaskColor,
 
   onListDragStart,
-  onListDropOnList,
+  // onListDropOnList is handled by placeholders in KanbanSwimlane
   onListDragEnd,
   draggingListId,
-  dropTargetListId,
+  dropTargetListId, 
   onListDragOver, 
 }: KanbanListProps) {
   const listStyle = list.color ? { backgroundColor: list.color } : {};
@@ -75,6 +75,12 @@ export function KanbanList({ // Renamed from List
   const triggerColorInput = () => {
     colorInputRef.current?.click();
   };
+
+  // Determine if a placeholder is supposed to be active *before* this list.
+  // This helps the list know when to "step back" and let the placeholder be the target.
+  const isPlaceholderActiveBeforeThisList = draggingListId && 
+                                            dropTargetListId === list.id && 
+                                            draggingListId !== list.id;
 
   return (
     <>
@@ -89,33 +95,36 @@ export function KanbanList({ // Renamed from List
       <div
         className={cn(
           "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full relative",
-          draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : ""
+          // Visual indication if this list itself is being dragged
+          draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : "" 
         )}
         style={listStyle}
         onDragOver={(e) => {
-          if (draggingListId && draggingListId !== list.id) { 
-            onListDragOver(e, list.id); 
-          } else if (draggingTaskId) { 
-             onTaskDragOverList(e, list.id, undefined); // Drop at end of list if no target task
-          } else {
+          // If another list is being dragged over this list AND a placeholder isn't already active for this spot
+          if (draggingListId && draggingListId !== list.id && !isPlaceholderActiveBeforeThisList) {
+            onListDragOver(e, list.id); // Tell parent to show placeholder before this list
+          } 
+          // If a task is being dragged over this list's general area (not a specific task)
+          else if (draggingTaskId) { 
+             onTaskDragOverList(e, list.id, null); // Drop task at end of list if no specific task target
+          } 
+          // Default behavior if no specific drag type matches, allowing drops for tasks on scroll area.
+          else {
             e.preventDefault(); 
           }
         }}
-        // onDrop is handled by placeholders or ScrollArea for dropping tasks
       >
         <div className="p-3 border-b border-border flex items-center justify-between">
           <div 
             className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
             draggable
             onDragStart={(e) => { 
-                // e.stopPropagation(); // Keep stopPropagation here if needed
                 onListDragStart(e, list.id, swimlaneId); 
             }}
             onDragEnd={onListDragEnd}
             aria-label={`Drag list ${list.title}`}
             data-no-card-click="true" 
           >
-            {/* <GripVertical className="h-5 w-5 text-muted-foreground" /> */}
             <h3 className="font-semibold text-lg text-foreground truncate">{list.title} <span className="text-sm text-muted-foreground">({tasks.length})</span></h3>
           </div>
           <DropdownMenu>
@@ -139,26 +148,24 @@ export function KanbanList({ // Renamed from List
         </div>
         <ScrollArea 
             className="flex-1 p-3"
-            onDragOver={(e) => { // Handles dropping task at the end or in empty list
+            onDragOver={(e) => { 
               if (draggingTaskId) {
                 onTaskDragOverList(e, list.id, null); 
               }
             }}
-            onDrop={(e) => { // Handles dropping task at the end or in empty list
+            onDrop={(e) => { 
                  if (draggingTaskId && dropIndicator?.listId === list.id && dropIndicator?.beforeTaskId === null) {
-                    onDropTask(e, list.id, undefined); // undefined for targetTaskId means end of list
+                    onDropTask(e, list.id, undefined); 
                  } else {
-                    e.preventDefault(); // Prevent default if not the intended drop target for end-of-list
+                    e.preventDefault(); 
                  }
             }}
         >
-          {/* Placeholder for empty list or when dragging to the end of a list */}
           {tasks.length === 0 && draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === null && (
             <div
               className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
-              // onDragOver for this specific placeholder is important
               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onTaskDragOverList(e, list.id, null); e.dataTransfer.dropEffect = "move"; }}
-              onDrop={(e) => onDropTask(e, list.id, undefined)} // Drop at the end (or in empty list)
+              onDrop={(e) => onDropTask(e, list.id, undefined)}
             />
           )}
           {tasks.length === 0 && !draggingTaskId && (
@@ -171,46 +178,39 @@ export function KanbanList({ // Renamed from List
 
           {tasks.map((task) => (
             <React.Fragment key={task.id}>
-              {/* Placeholder for dropping a task *before* an existing task */}
               {draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === task.id && (
                 <div
                   className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
-                  // onDragOver for this specific placeholder is important
                   onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onTaskDragOverList(e, list.id, task.id); e.dataTransfer.dropEffect = "move"; }}
-                  onDrop={(e) => onDropTask(e, list.id, task.id)} // Drop before this task
+                  onDrop={(e) => onDropTask(e, list.id, task.id)}
                 />
               )}
               <div 
-                // This div wrapping TaskCard is crucial for onTaskDragOverList to correctly identify targetTaskId
-                onDragOver={(e) => { // This div ensures dragOver for specific task positioning is caught
-                  if (draggingTaskId && draggingTaskId !== task.id) { // Don't trigger for the task being dragged itself
+                onDragOver={(e) => { 
+                  if (draggingTaskId && draggingTaskId !== task.id) { 
                     onTaskDragOverList(e, list.id, task.id);
                   } else {
-                     e.preventDefault(); // Prevent default for other cases to allow dropping on the list itself
+                     e.preventDefault(); 
                   }
                 }}
               >
-                <TaskCard // Changed from Card to TaskCard
+                <TaskCard
                   task={task}
                   isDragging={draggingTaskId === task.id}
-                  onDragStart={onDragTaskStart} // Pass the prop directly
-                  onDragEnd={onDragTaskEnd}     // Pass the prop directly
+                  onDragStart={onDragTaskStart} 
+                  onDragEnd={onDragTaskEnd}     
                   onOpenCard={onOpenCard}
                   onSetTaskColor={onSetTaskColor}
-                  // onDeleteTask can be added here if needed
                 />
               </div>
             </React.Fragment>
           ))}
-
-          {/* Placeholder for dropping at the end of the list if it has tasks, and not already handled by ScrollArea's drop */}
-          {/* This specific case might be redundant if ScrollArea's onDrop handles it, but can be a fallback */}
           {tasks.length > 0 && draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === null && 
-           !tasks.find(t => dropIndicator.beforeTaskId === t.id) && ( // Ensure not to show if a 'beforeTask' matches (already handled above)
+           !tasks.find(t => dropIndicator.beforeTaskId === t.id) && ( 
             <div
               className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
               onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onTaskDragOverList(e, list.id, null); e.dataTransfer.dropEffect = "move"; }}
-              onDrop={(e) => onDropTask(e, list.id, undefined)} // Drop at the end
+              onDrop={(e) => onDropTask(e, list.id, undefined)} 
             />
           )}
         </ScrollArea>
@@ -223,3 +223,4 @@ export function KanbanList({ // Renamed from List
     </>
   );
 }
+
