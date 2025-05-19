@@ -4,7 +4,7 @@
 import type { Swimlane as SwimlaneType, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList"; // Changed from List to KanbanList
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, PlusCircle } from "lucide-react";
+import { Menu, Trash2, Palette, Plus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,6 +134,8 @@ export function KanbanSwimlane({
 
   const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
   
+  const listsToRender = lists.filter(l => l.id !== draggingListId);
+
   const swimlaneContentDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
       onSwimlaneDragOver(e, swimlane.id);
@@ -166,11 +168,11 @@ export function KanbanSwimlane({
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button variant="ghost" size="icon" onClick={() => setAddDialogOpen(true)} data-no-card-click="true" className="h-7 w-7">
-                    <PlusCircle className="h-5 w-5" />
+                    <Plus className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Add Swimlane Below</p>
+                  <p>Add Swimlane</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -229,7 +231,7 @@ export function KanbanSwimlane({
           onDragOver={handleDragOverListArea} 
           onDrop={handleDropListOnSwimlaneArea}
         >
-          {!isAnySwimlaneBeingDragged && lists.map((list) => { 
+          {!isAnySwimlaneBeingDragged && listsToRender.map((list) => { 
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
@@ -248,6 +250,7 @@ export function KanbanSwimlane({
                         e.stopPropagation(); 
                         e.dataTransfer.dropEffect = "move";
                         if (draggingListId) {
+                           // When dragging over this placeholder, re-assert that the drop target is this list's position
                            onListDragOver(e, list.id); 
                         }
                     }}
@@ -321,3 +324,5 @@ export function KanbanSwimlane({
     </>
   );
 }
+
+  
