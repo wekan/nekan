@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, ArrowDown, PlusCircle, GripVertical } from "lucide-react";
+import { Menu, Trash2, Palette, ArrowDown, PlusCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,7 +43,7 @@ interface KanbanSwimlaneProps {
   onSwimlaneDragStart: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void;
   onSwimlaneDrop: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
   onSwimlaneDragEnd: () => void;
-  draggingSwimlaneId: string | null;
+  draggingSwimlaneId: string | null; // ID of the swimlane being dragged, or null
   dropTargetSwimlaneId: string | null;
   
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
@@ -73,7 +73,7 @@ export function KanbanSwimlane({
   onSwimlaneDragStart,
   onSwimlaneDrop,
   onSwimlaneDragEnd,
-  draggingSwimlaneId,
+  draggingSwimlaneId, // This prop tells us if *any* swimlane is being dragged and which one
   dropTargetSwimlaneId,
   onListDragStart,
   onListDropOnList,
@@ -86,6 +86,10 @@ export function KanbanSwimlane({
   const colorInputRef = useRef<HTMLInputElement>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
+  const isCurrentlyDraggingThisSwimlane = draggingSwimlaneId === swimlane.id;
+  const isAnySwimlaneBeingDragged = !!draggingSwimlaneId;
+
+
   const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSetSwimlaneColor(swimlane.id, event.target.value);
   };
@@ -96,11 +100,16 @@ export function KanbanSwimlane({
 
   const handleDragOverSwimlane = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    // This is for dropping a swimlane onto another swimlane (target)
+    if (draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
+       // Handled by Board level onDragOver on the dropzone div
+    }
   };
 
   const handleDropOnSwimlane = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
+    // This is for dropping a swimlane onto another swimlane (target)
     if (draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
         onSwimlaneDrop(event, swimlane.id);
     }
@@ -108,6 +117,10 @@ export function KanbanSwimlane({
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    // This is for dropping lists into the swimlane area
+    if (draggingListId) {
+        onListDropOnSwimlaneArea(event, swimlane.id);
+    }
   };
 
   const handleDropListOnSwimlaneArea = (event: React.DragEvent<HTMLDivElement>) => {
@@ -136,15 +149,16 @@ export function KanbanSwimlane({
         onChange={handleColorInputChange}
         data-no-card-click="true"
       />
-      <div
+      <div // Main swimlane container
         className={cn(
-          "flex flex-col p-4 rounded-lg shadow-md border relative",
-          draggingSwimlaneId === swimlane.id ? "opacity-50 ring-2 ring-primary" : "border-border",
-          dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id ? "border-dashed border-primary border-2" : ""
+          "flex flex-col p-4 rounded-lg shadow-md border relative transition-all duration-300 ease-in-out",
+          isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : "border-border",
+          dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id ? "border-dashed border-primary border-2" : "" // This is for the placeholder styling, applied by KanbanBoard
         )}
         style={swimlaneStyle}
-        onDragOver={handleDragOverSwimlane}
-        onDrop={handleDropOnSwimlane}
+        onDragOver={handleDragOverSwimlane} // Allows dropping swimlanes on top of this one to determine order
+        onDrop={handleDropOnSwimlane} // Handles the drop of a swimlane
+        // onDragStart and onDragEnd are on the title div
       >
          {dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id && (
           <div className="absolute top-0 left-0 right-0 h-2 bg-primary/50 rounded-t flex items-center justify-center z-10">
@@ -187,26 +201,37 @@ export function KanbanSwimlane({
           </div>
           
           <div 
-            className="flex items-center gap-2 flex-1 min-w-0 cursor-grab px-2"
-            draggable 
+            className="flex items-center gap-2 flex-1 min-w-0 px-2"
+            draggable={!isAnySwimlaneBeingDragged || isCurrentlyDraggingThisSwimlane} // Only allow dragging this title if no other swimlane drag is active OR it's this one
             onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
             onDragEnd={onSwimlaneDragEnd}
             aria-label={`Drag swimlane ${swimlane.name}`}
             data-no-card-click="true"
           >
-            <h2 className="text-xl font-semibold text-foreground truncate">{swimlane.name}</h2>
+            <h2 className={cn(
+                "text-xl font-semibold text-foreground truncate",
+                (!isAnySwimlaneBeingDragged || isCurrentlyDraggingThisSwimlane) ? "cursor-grab" : "cursor-default"
+             )}>
+                {swimlane.name}
+            </h2>
           </div>
         </div>
 
-        <div 
+        <div // List container
           className={cn(
-            "flex gap-4 overflow-x-auto pb-2 min-h-[150px] relative",
-            dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId ? "border-2 border-dashed border-primary" : ""
-            )} 
+            "flex gap-4 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
+            // Styles for when lists are visible
+            !isAnySwimlaneBeingDragged && "min-h-[150px] opacity-100",
+            // Styles for when lists should be hidden (any swimlane is being dragged)
+            isAnySwimlaneBeingDragged && "max-h-0 opacity-0 p-0 m-0 border-none min-h-0",
+            // Styles for list drop target (only if lists are visible and a list is being dragged)
+            !isAnySwimlaneBeingDragged && dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId ? "border-2 border-dashed border-primary" : ""
+          )}
           onDragOver={handleDragOverListArea}
           onDrop={handleDropListOnSwimlaneArea}
         >
-          {lists.map((list) => {
+          {/* Only render lists if no swimlane is being dragged */}
+          {!isAnySwimlaneBeingDragged && lists.map((list) => {
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
@@ -227,12 +252,13 @@ export function KanbanSwimlane({
                   onSetTaskColor={onSetTaskColor}
                   onListDragStart={onListDragStart}
                   onListDropOnList={onListDropOnList}
+                  onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} // This needs to be correct.
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
                   dropTargetListId={dropTargetListId}
                 />
                 {/* Drop indicator for lists between lists */}
-                {dropTargetListId === list.id && draggingListId && draggingListId !== list.id && (
+                {!isAnySwimlaneBeingDragged && dropTargetListId === list.id && draggingListId && draggingListId !== list.id && (
                   <div className="w-2 bg-primary/50 rounded mx-1 self-stretch flex items-center justify-center -order-1 relative left-[-12px]">
                      <ArrowDown className="h-3 w-3 text-primary-foreground transform -rotate-90"/>
                   </div>
@@ -240,7 +266,16 @@ export function KanbanSwimlane({
               </React.Fragment>
             );
           })}
-           {lists.length === 0 && draggingListId && (
+
+          {/* Placeholder for when lists are hidden due to swimlane drag */}
+          {isAnySwimlaneBeingDragged && (
+            <div className="w-full text-center text-xs text-muted-foreground italic py-2">
+              {/* Content is hidden by parent's max-h-0 opacity-0 */}
+            </div>
+          )}
+
+          {/* Placeholder for empty swimlane when a list is being dragged (and no swimlane drag) */}
+          {!isAnySwimlaneBeingDragged && lists.length === 0 && draggingListId && (
             <div className="flex-1 min-w-[200px] border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 p-4">
               Drop list here
             </div>
@@ -256,6 +291,3 @@ export function KanbanSwimlane({
     </>
   );
 }
-
-
-    
