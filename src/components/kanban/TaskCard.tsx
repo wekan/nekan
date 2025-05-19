@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from "react";
 import type { Task } from "@/lib/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Settings, Trash2, Palette } from "lucide-react";
+import { CalendarDays, Menu, Trash2, Palette } from "lucide-react"; // Changed Settings to Menu
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,13 +32,17 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
   useEffect(() => {
     if (task.deadline) {
       try {
+        // Ensure the deadline is treated as local time, not UTC, if only date is provided
         const date = new Date(task.deadline + "T00:00:00");
         if (!isNaN(date.valueOf())) {
+            // Format to a more readable date string, e.g., "August 20, 2024"
+            // This formatting will be client-side only to avoid hydration issues with toLocaleDateString initially
             setDisplayDeadline(date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
         } else {
-            setDisplayDeadline(task.deadline);
+            setDisplayDeadline(task.deadline); // Fallback if parsing fails
         }
       } catch (e) {
+        // Fallback in case of error
         setDisplayDeadline(task.deadline);
       }
     } else {
@@ -58,16 +62,21 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
   const cardStyle = task.color ? { backgroundColor: task.color } : {};
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Prevent card click if the click originated from an element that should not trigger it (like a button or handle *if it were separate*)
-    // Since the title itself is now draggable, this check is mostly for the settings cog.
     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
       return;
     }
-    // If a drag didn't actually start, treat as a click
-    if (!isDragging) {
+    if (!isDragging && !(e.target as HTMLElement).closest('[draggable="true"]')) {
         onOpenCard(task.id);
     }
   };
+  
+  const handleTitleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // If the click is on the draggable title area but not a drag action
+    if (!isDragging) {
+      onOpenCard(task.id);
+    }
+  };
+
 
   return (
     <>
@@ -82,29 +91,21 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
       <Card
         style={cardStyle}
         className={cn(
-          "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow group/taskcard", // Removed cursor-pointer as title is now the specific drag target
+          "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow group/taskcard",
           isDragging ? "opacity-50 ring-2 ring-primary scale-105" : "",
           "bg-card"
         )}
-        // onClick={handleCardClick} // Moved click handling to specific elements or rely on title click for opening.
-        // The main card click is removed to avoid conflict with title dragging.
-        // Opening card details will be more explicitly tied to clicking non-interactive parts or the title *without* dragging.
+        // Main card click removed to be more specific
       >
-        <CardHeader className="p-0 mb-2 flex flex-row items-center justify-between">
-          {/* Card Title - Now Draggable */}
+        <CardHeader className="p-0 mb-2 flex flex-row items-center justify-between gap-2">
+          {/* Card Title - Draggable */}
           <div
             draggable
             onDragStart={(e) => {
-              // e.stopPropagation(); // Stop if title is inside another clickable/draggable, but here it's the primary target.
               onDragStart(e, task.id);
             }}
             onDragEnd={onDragEnd}
-            onClick={(e) => {
-                // Allow opening card if just clicking the title without dragging
-                if (!(e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
-                    onOpenCard(task.id);
-                }
-            }}
+            onClick={handleTitleClick}
             className="flex-1 min-w-0 cursor-grab group-hover/taskcard:opacity-100 transition-opacity"
             aria-label={`Drag task ${task.title}`}
           >
@@ -113,12 +114,12 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
             </CardTitle>
           </div>
 
-          {/* Settings Cog */}
-          <div className="shrink-0 ml-2" data-no-card-click="true">
+          {/* Menu Icon */}
+          <div className="shrink-0" data-no-card-click="true">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7 opacity-70 group-hover/taskcard:opacity-100 transition-opacity">
-                  <Settings className="h-4 w-4" />
+                  <Menu className="h-4 w-4" /> {/* Changed from Settings */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -140,12 +141,12 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
           </div>
         </CardHeader>
         {task.description && (
-          <CardContent className="p-0 mb-2" onClick={() => onOpenCard(task.id)} style={{cursor: 'pointer'}}>
+          <CardContent className="p-0 mb-2" onClick={handleCardClick} style={{cursor: 'pointer'}}>
             <p className="text-sm text-muted-foreground break-words">{task.description}</p>
           </CardContent>
         )}
         {displayDeadline && (
-          <div className="flex items-center text-xs text-muted-foreground mt-1" onClick={() => onOpenCard(task.id)} style={{cursor: 'pointer'}}>
+          <div className="flex items-center text-xs text-muted-foreground mt-1" onClick={handleCardClick} style={{cursor: 'pointer'}}>
             <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
             <span>{displayDeadline}</span>
           </div>

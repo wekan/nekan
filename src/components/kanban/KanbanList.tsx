@@ -4,7 +4,7 @@
 import type { List, Task } from "@/lib/types";
 import { TaskCard } from "./TaskCard";
 import { Button } from "@/components/ui/button";
-import { PlusSquare, Settings, Trash2, Palette, ArrowDown } from "lucide-react";
+import { PlusSquare, Menu, Trash2, Palette, ArrowDown } from "lucide-react"; // Changed Settings to Menu
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -126,7 +126,7 @@ export function KanbanList({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" data-no-card-click="true">
-                <Settings className="h-4 w-4" />
+                <Menu className="h-4 w-4" /> {/* Changed from Settings */}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

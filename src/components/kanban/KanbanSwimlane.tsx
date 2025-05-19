@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Settings, Trash2, Palette, ArrowDown } from "lucide-react";
+import { Menu, Trash2, Palette, ArrowDown } from "lucide-react"; // Changed Settings to Menu
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -142,7 +142,7 @@ export function KanbanSwimlane({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" data-no-card-click="true" className="shrink-0">
-                <Settings className="h-5 w-5" />
+                <Menu className="h-5 w-5" /> {/* Changed from Settings */}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
