@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, PlusCircle } from "lucide-react";
+import { Menu, Trash2, Palette, PlusCircle, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +32,8 @@ interface KanbanSwimlaneProps {
   onDragTaskStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
   onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
   draggingTaskId: string | null;
-  dropIndicator: { listId: string; beforeTaskId: string | null } | null; // For task drop placeholder
-  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string) => void; // For task drop placeholder
+  dropIndicator: { listId: string; beforeTaskId: string | null } | null; 
+  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string) => void; 
 
 
   onDeleteSwimlane: (swimlaneId: string) => void;
@@ -152,7 +152,7 @@ export function KanbanSwimlane({
             if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
                  onSwimlaneDragOver(e, swimlane.id);
             } else {
-                e.preventDefault(); // Still need to allow drop for lists/tasks within
+                e.preventDefault(); 
             }
         }}
       >
@@ -215,22 +215,34 @@ export function KanbanSwimlane({
         <div 
           className={cn(
             "flex gap-4 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
-            isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100",
-             !isAnySwimlaneBeingDragged && dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId && !lists.find(l=>l.id === dropTargetListId) ? "border-2 border-dashed border-primary p-2" : ""
+            isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100"
           )}
           onDragOver={handleDragOverListArea}
           onDrop={handleDropListOnSwimlaneArea}
         >
-          {!isAnySwimlaneBeingDragged && lists.map((list) => {
+          {!isAnySwimlaneBeingDragged && lists.map((list, listIndex) => {
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
               .sort((a,b) => a.order - b.order) as Task[];
+            
+            const showListDropPlaceholder = draggingListId && 
+                                           dropTargetListId === list.id && 
+                                           draggingListId !== list.id;
             return (
               <React.Fragment key={list.id}>
+                {showListDropPlaceholder && (
+                  <div 
+                    className="w-2 h-auto bg-primary/30 rounded-full mx-1 self-stretch flex items-center justify-center opacity-75"
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onListDragOver(e, list.id); e.dataTransfer.dropEffect = "move";}}
+                    onDrop={(e) => onListDropOnList(e, list.id, swimlane.id)}
+                  >
+                    <ArrowDown className="h-4 w-4 text-primary-foreground transform -rotate-90"/>
+                  </div>
+                )}
                 <KanbanList
+                  swimlaneId={swimlane.id}
                   list={list}
-                  swimlaneId={swimlane.id} 
                   tasks={tasksInList}
                   onAddTask={onOpenCreateTaskForm}
                   
@@ -250,14 +262,18 @@ export function KanbanSwimlane({
                   onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
-                  dropTargetListId={dropTargetListId}
+                  dropTargetListId={dropTargetListId} // Pass this to KanbanList
                   onListDragOver={onListDragOver}
                 />
               </React.Fragment>
             );
           })}
-          {!isAnySwimlaneBeingDragged && lists.length === 0 && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
-            <div className="flex-1 min-w-[200px] border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 p-4">
+          {!isAnySwimlaneBeingDragged && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
+            <div 
+                className="flex-shrink-0 w-64 h-auto p-4 border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 bg-background/30"
+                onDragOver={(e) => {e.preventDefault(); e.stopPropagation(); onSwimlaneAreaDragOverForList(e, swimlane.id); e.dataTransfer.dropEffect = "move";}}
+                onDrop={(e) => onListDropOnSwimlaneArea(e, swimlane.id)}
+            >
               Drop list here
             </div>
            )}
@@ -272,3 +288,4 @@ export function KanbanSwimlane({
     </>
   );
 }
+
