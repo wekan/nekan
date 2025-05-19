@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, ArrowDown } from "lucide-react"; // Changed Settings to Menu
+import { Menu, Trash2, Palette, ArrowDown, PlusCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import React, { useRef } from 'react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import React, { useRef, useState } from 'react';
 import { cn } from "@/lib/utils";
+import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 
 interface KanbanSwimlaneProps {
   swimlane: Swimlane;
@@ -29,11 +36,16 @@ interface KanbanSwimlaneProps {
   onSetSwimlaneColor: (swimlaneId: string, color: string) => void;
   onSetListColor: (listId: string, color: string) => void;
   onSetTaskColor: (taskId: string, color: string) => void;
+  
+  onAddSwimlaneBelow: (name: string, referenceSwimlaneId: string) => void;
+  onAddSwimlaneFromTemplate: (referenceSwimlaneId: string) => void;
+
   onSwimlaneDragStart: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void;
   onSwimlaneDrop: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
   onSwimlaneDragEnd: () => void;
   draggingSwimlaneId: string | null;
   dropTargetSwimlaneId: string | null;
+  
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
   onListDropOnList: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetSwimlaneId: string) => void;
   onListDropOnSwimlaneArea: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
@@ -56,6 +68,8 @@ export function KanbanSwimlane({
   onSetSwimlaneColor,
   onSetListColor,
   onSetTaskColor,
+  onAddSwimlaneBelow,
+  onAddSwimlaneFromTemplate,
   onSwimlaneDragStart,
   onSwimlaneDrop,
   onSwimlaneDragEnd,
@@ -70,6 +84,7 @@ export function KanbanSwimlane({
 }: KanbanSwimlaneProps) {
   const swimlaneStyle = swimlane.color ? { backgroundColor: swimlane.color } : {};
   const colorInputRef = useRef<HTMLInputElement>(null);
+  const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
   const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSetSwimlaneColor(swimlane.id, event.target.value);
@@ -103,6 +118,14 @@ export function KanbanSwimlane({
     }
   };
 
+  const handleAddSubmit = (name: string) => {
+    onAddSwimlaneBelow(name, swimlane.id);
+  };
+
+  const handleAddFromTemplate = () => {
+    onAddSwimlaneFromTemplate(swimlane.id);
+  };
+
   return (
     <>
       <input
@@ -129,8 +152,42 @@ export function KanbanSwimlane({
           </div>
         )}
         <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 shrink-0">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" onClick={() => setAddDialogOpen(true)} data-no-card-click="true" className="h-7 w-7">
+                    <PlusCircle className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add Swimlane Below</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" data-no-card-click="true" className="h-7 w-7">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start"> {/* Align to start (left) */}
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
+                  <Palette className="mr-2 h-4 w-4" />
+                  Change Color
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onDeleteSwimlane(swimlane.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Swimlane
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
           <div 
-            className="flex items-center gap-2 flex-1 min-w-0 cursor-grab"
+            className="flex items-center gap-2 flex-1 min-w-0 cursor-grab justify-center px-2" // Added justify-center and padding for title
             draggable 
             onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
             onDragEnd={onSwimlaneDragEnd}
@@ -139,24 +196,11 @@ export function KanbanSwimlane({
           >
             <h2 className="text-xl font-semibold text-foreground truncate">{swimlane.name}</h2>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" data-no-card-click="true" className="shrink-0">
-                <Menu className="h-5 w-5" /> {/* Changed from Settings */}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
-                <Palette className="mr-2 h-4 w-4" />
-                Change Color
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onDeleteSwimlane(swimlane.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete Swimlane
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+           {/* Spacer to balance the left-side buttons, making title appear more centered */}
+          <div className="flex items-center gap-2 shrink-0" style={{ visibility: 'hidden' }}>
+            <Button variant="ghost" size="icon" className="h-7 w-7"><PlusCircle className="h-5 w-5" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7"><Menu className="h-5 w-5" /></Button>
+          </div>
         </div>
 
         <div 
@@ -208,6 +252,12 @@ export function KanbanSwimlane({
            )}
         </div>
       </div>
+      <AddSwimlaneDialog
+        isOpen={isAddDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onSubmit={handleAddSubmit}
+        onUseTemplate={handleAddFromTemplate}
+      />
     </>
   );
 }
