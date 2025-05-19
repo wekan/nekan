@@ -4,7 +4,7 @@
 import type { List, Task } from "@/lib/types";
 import { TaskCard } from "./TaskCard";
 import { Button } from "@/components/ui/button";
-import { PlusSquare, Menu, Trash2, Palette, ArrowDown } from "lucide-react"; // Changed Settings to Menu
+import { PlusSquare, Menu, Trash2, Palette, ArrowDown } from "lucide-react"; 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -21,10 +21,14 @@ interface KanbanListProps {
   swimlaneId: string;
   tasks: Task[];
   onAddTask: (listId: string) => void;
+  
   onDropTask: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => void;
   onDragTaskStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
   onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
   draggingTaskId: string | null;
+  dropIndicator: { listId: string; beforeTaskId: string | null } | null;
+  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string) => void;
+
   onOpenCard: (taskId: string) => void;
   onSetListColor: (listId: string, color: string) => void;
   onSetTaskColor: (taskId: string, color: string) => void;
@@ -33,7 +37,7 @@ interface KanbanListProps {
   onListDragEnd: () => void;
   draggingListId: string | null;
   dropTargetListId: string | null;
-  onListDragOver: (event: React.DragEvent<HTMLDivElement>, targetListId: string) => void; // New prop
+  onListDragOver: (event: React.DragEvent<HTMLDivElement>, targetListId: string) => void; 
 }
 
 export function KanbanList({
@@ -41,10 +45,14 @@ export function KanbanList({
   swimlaneId,
   tasks,
   onAddTask,
+  
   onDropTask,
   onDragTaskStart,
   onDragTaskEnd,
   draggingTaskId,
+  dropIndicator,
+  onTaskDragOverList,
+
   onOpenCard,
   onSetListColor,
   onSetTaskColor,
@@ -53,7 +61,7 @@ export function KanbanList({
   onListDragEnd,
   draggingListId,
   dropTargetListId,
-  onListDragOver, // New prop
+  onListDragOver, 
 }: KanbanListProps) {
   const listStyle = list.color ? { backgroundColor: list.color } : {};
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -66,31 +74,19 @@ export function KanbanList({
     colorInputRef.current?.click();
   };
 
-  const handleDragOverList = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOverListItself = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation(); // Prevent swimlane drag over from interfering
+    event.stopPropagation(); 
     if (draggingListId && draggingListId !== list.id) {
-      onListDragOver(event, list.id); // Call the new prop
+      onListDragOver(event, list.id); 
     }
   };
   
-  const handleDropOnList = (event: React.DragEvent<HTMLDivElement>) => {
+  const handleDropOnListItself = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation(); 
     if (draggingListId && draggingListId !== list.id) {
       onListDropOnList(event, list.id, swimlaneId);
-    }
-  };
-
-  const handleDragOverTaskArea = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault(); 
-  };
-
-  const handleDropTaskOnEmptyList = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (draggingTaskId) {
-        onDropTask(event, list.id);
     }
   };
 
@@ -111,8 +107,8 @@ export function KanbanList({
            (dropTargetListId === list.id) && draggingListId && draggingListId !== list.id ? "border-dashed border-primary border-2" : ""
         )}
         style={listStyle}
-        onDragOver={handleDragOverList}
-        onDrop={handleDropOnList}
+        onDragOver={handleDragOverListItself}
+        onDrop={handleDropOnListItself}
       >
          {dropTargetListId === list.id && draggingListId && draggingListId !== list.id && (
             <div className="absolute -left-3 top-0 bottom-0 w-2 bg-primary/50 rounded my-1 flex items-center justify-center">
@@ -124,7 +120,6 @@ export function KanbanList({
             className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
             draggable
             onDragStart={(e) => { 
-                // e.stopPropagation(); // Not needed here as it's the primary draggable part
                 onListDragStart(e, list.id, swimlaneId); 
             }}
             onDragEnd={onListDragEnd}
@@ -153,32 +148,62 @@ export function KanbanList({
         </div>
         <ScrollArea 
             className="flex-1 p-3"
-            onDragOver={handleDragOverTaskArea}
-            onDrop={handleDropTaskOnEmptyList}
+            onDragOver={(e) => {
+              if (draggingTaskId) {
+                onTaskDragOverList(e, list.id, undefined); // Pass undefined for targetTaskId to signify end of list or empty
+              }
+            }}
         >
-          {tasks.length === 0 && (
+          {tasks.length === 0 && draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === null && (
+            <div
+              className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; }}
+              onDrop={(e) => onDropTask(e, list.id, undefined)}
+            />
+          )}
+          {tasks.length === 0 && !draggingTaskId && (
              <div 
               className="flex-1 min-h-[100px] flex items-center justify-center text-muted-foreground opacity-75 rounded border border-dashed border-muted-foreground/30"
             >
-              Drop tasks here
+              Drop tasks here or add new
             </div>
           )}
+
           {tasks.map((task) => (
-            <div 
-              key={task.id}
-              onDragOver={handleDragOverTaskArea} 
-              onDrop={(e) => { e.stopPropagation(); onDropTask(e, list.id, task.id);}}
-            >
-              <TaskCard
-                task={task}
-                isDragging={draggingTaskId === task.id}
-                onDragStart={onDragTaskStart}
-                onDragEnd={onDragTaskEnd}
-                onOpenCard={onOpenCard}
-                onSetTaskColor={onSetTaskColor}
-              />
-            </div>
+            <React.Fragment key={task.id}>
+              {draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === task.id && (
+                <div
+                  className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; }}
+                  onDrop={(e) => onDropTask(e, list.id, task.id)}
+                />
+              )}
+              <div 
+                onDragOver={(e) => {
+                  if (draggingTaskId) {
+                    onTaskDragOverList(e, list.id, task.id);
+                  }
+                }}
+              >
+                <TaskCard
+                  task={task}
+                  isDragging={draggingTaskId === task.id}
+                  onDragStart={onDragTaskStart}
+                  onDragEnd={onDragTaskEnd}
+                  onOpenCard={onOpenCard}
+                  onSetTaskColor={onSetTaskColor}
+                />
+              </div>
+            </React.Fragment>
           ))}
+
+          {tasks.length > 0 && draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === null && (
+            <div
+              className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move"; }}
+              onDrop={(e) => onDropTask(e, list.id, undefined)}
+            />
+          )}
         </ScrollArea>
         <div className="p-3 border-t border-border">
           <Button variant="outline" className="w-full" onClick={() => onAddTask(list.id)}>

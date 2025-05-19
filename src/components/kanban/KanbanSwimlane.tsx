@@ -27,10 +27,15 @@ interface KanbanSwimlaneProps {
   lists: ListType[];
   tasks: Record<string, Task>;
   onOpenCreateTaskForm: (listId: string) => void;
+  
   onDropTask: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => void;
   onDragTaskStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
   onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
   draggingTaskId: string | null;
+  dropIndicator: { listId: string; beforeTaskId: string | null } | null; // For task drop placeholder
+  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string) => void; // For task drop placeholder
+
+
   onDeleteSwimlane: (swimlaneId: string) => void;
   onOpenCard: (taskId: string) => void;
   onSetSwimlaneColor: (swimlaneId: string, color: string) => void;
@@ -60,10 +65,14 @@ export function KanbanSwimlane({
   lists,
   tasks,
   onOpenCreateTaskForm,
+  
   onDropTask,
   onDragTaskStart,
   onDragTaskEnd,
   draggingTaskId,
+  dropIndicator,
+  onTaskDragOverList,
+
   onDeleteSwimlane,
   onOpenCard,
   onSetSwimlaneColor,
@@ -101,7 +110,7 @@ export function KanbanSwimlane({
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation(); // Prevent swimlane drag over from interfering
+    event.stopPropagation(); 
     if (draggingListId) {
         onSwimlaneAreaDragOverForList(event, swimlane.id);
     }
@@ -135,12 +144,16 @@ export function KanbanSwimlane({
       />
       <div 
         className={cn(
-          "flex flex-col p-4 rounded-lg shadow-md border relative transition-all duration-300 ease-in-out",
+          "flex flex-col p-4 rounded-lg shadow-md border transition-all duration-300 ease-in-out",
           isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : "border-border",
         )}
         style={swimlaneStyle}
         onDragOver={(e) => {
-            onSwimlaneDragOver && onSwimlaneDragOver(e, swimlane.id);
+            if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
+                 onSwimlaneDragOver(e, swimlane.id);
+            } else {
+                e.preventDefault(); // Still need to allow drop for lists/tasks within
+            }
         }}
       >
         <div className="flex items-center justify-between mb-4"> 
@@ -179,16 +192,13 @@ export function KanbanSwimlane({
           </div>
           
           <div 
-            className={cn(
-                "flex items-center gap-2 flex-1 min-w-0 px-2", 
-                "cursor-grab" 
-            )}
+            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
             draggable={true} 
             onDragStart={(e) => { 
               const draggedElement = e.currentTarget as HTMLElement;
               const rect = draggedElement.getBoundingClientRect();
               const xOffset = e.clientX - rect.left;
-              const yOffset = e.clientY - rect.top; // Adjust yOffset to be relative to the click point within the title
+              const yOffset = e.clientY - rect.top; 
               e.dataTransfer.setDragImage(draggedElement, xOffset, yOffset);
               onSwimlaneDragStart(e, swimlane.id); 
             }}
@@ -196,9 +206,7 @@ export function KanbanSwimlane({
             aria-label={`Drag swimlane ${swimlane.name}`}
             data-no-card-click="true"
           >
-            <h2 className={cn(
-                "text-xl font-semibold text-foreground truncate"
-             )}>
+            <h2 className="text-xl font-semibold text-foreground truncate">
                 {swimlane.name}
             </h2>
           </div>
@@ -225,13 +233,18 @@ export function KanbanSwimlane({
                   swimlaneId={swimlane.id} 
                   tasks={tasksInList}
                   onAddTask={onOpenCreateTaskForm}
+                  
                   onDropTask={onDropTask}
                   onDragTaskStart={onDragTaskStart} 
                   onDragTaskEnd={onDragTaskEnd} 
                   draggingTaskId={draggingTaskId}
+                  dropIndicator={dropIndicator}
+                  onTaskDragOverList={onTaskDragOverList}
+
                   onOpenCard={onOpenCard}
                   onSetListColor={onSetListColor}
                   onSetTaskColor={onSetTaskColor}
+
                   onListDragStart={onListDragStart}
                   onListDropOnList={onListDropOnList}
                   onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
