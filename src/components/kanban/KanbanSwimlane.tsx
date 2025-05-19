@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { Swimlane, Column as ColumnType, Task } from "@/lib/types";
-import { KanbanColumn } from "./KanbanColumn";
+import type { Swimlane, List as ListType, Task } from "@/lib/types"; // Changed Column as ColumnType to List as ListType
+import { KanbanList } from "./KanbanList"; // Changed KanbanColumn to KanbanList
 import { Button } from "@/components/ui/button";
 import { GripVertical, Settings, Trash2, Palette } from "lucide-react";
 import {
@@ -15,21 +15,20 @@ import {
 
 interface KanbanSwimlaneProps {
   swimlane: Swimlane;
-  columns: ColumnType[];
+  lists: ListType[]; // Changed columns to lists
   tasks: Record<string, Task>;
-  onOpenCreateTaskForm: (columnId: string) => void;
-  onDropTask: (event: React.DragEvent<HTMLDivElement>, targetColumnId: string, targetTaskId?: string) => void;
+  onOpenCreateTaskForm: (listId: string) => void; // Changed columnId to listId
+  onDropTask: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => void; // Changed targetColumnId to targetListId
   onDragTaskStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
   onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
   draggingTaskId: string | null;
   onDeleteSwimlane: (swimlaneId: string) => void;
   onOpenCard: (taskId: string) => void;
-  // TODO: Add props for swimlane D&D, color change
 }
 
 export function KanbanSwimlane({
   swimlane,
-  columns,
+  lists, // Changed columns to lists
   tasks,
   onOpenCreateTaskForm,
   onDropTask,
@@ -48,7 +47,6 @@ export function KanbanSwimlane({
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          {/* Placeholder for Swimlane Drag Handle */}
           <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" aria-label="Drag swimlane" />
           <h2 className="text-xl font-semibold text-foreground">{swimlane.name}</h2>
         </div>
@@ -72,16 +70,16 @@ export function KanbanSwimlane({
         </DropdownMenu>
       </div>
       <div className="flex gap-4 overflow-x-auto pb-2">
-        {columns.map(column => {
-          const tasksInColumn = column.taskIds
+        {lists.map(list => { // Changed columns to lists, column to list
+          const tasksInList = list.taskIds // Changed tasksInColumn, column to list
             .map(taskId => tasks[taskId])
             .filter(Boolean)
             .sort((a,b) => a.order - b.order) as Task[];
           return (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              tasks={tasksInColumn}
+            <KanbanList // Changed KanbanColumn to KanbanList
+              key={list.id} // Changed column to list
+              list={list} // Changed column to list
+              tasks={tasksInList} // Changed tasksInColumn
               onAddTask={onOpenCreateTaskForm}
               onDropTask={onDropTask}
               onDragTaskStart={onDragTaskStart}
@@ -91,8 +89,8 @@ export function KanbanSwimlane({
             />
           );
         })}
-        {/* Placeholder for Add Column Button within a swimlane */}
-        {/* <Button variant="outline" className="min-w-80 h-12 self-start">Add Column</Button> */}
+        {/* Placeholder for Add List Button within a swimlane */}
+        {/* <Button variant="outline" className="min-w-80 h-12 self-start">Add List</Button> */}
       </div>
     </div>
   );

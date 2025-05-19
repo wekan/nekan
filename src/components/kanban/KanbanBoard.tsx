@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Board as BoardType, Column as ColumnType, Task, Swimlane as SwimlaneType } from "@/lib/types";
+import type { Board as BoardType, List as ListType, Task, Swimlane as SwimlaneType } from "@/lib/types"; // Changed ColumnType to ListType
 import { KanbanSwimlane } from "./KanbanSwimlane";
 import { CreateTaskForm } from "./CreateTaskForm";
 import { ShareBoardDialog } from "./ShareBoardDialog";
@@ -17,21 +17,21 @@ const initialBoardData: BoardType = {
   name: "KanbanAI Project",
   tasks: {
     "task-1": { id: "task-1", title: "Setup project structure", description: "Initialize Next.js app, install dependencies.", deadline: "2024-08-01", order: 0 },
-    "task-2": { id: "task-2", title: "Design UI components", description: "Create TaskCard, KanbanColumn, KanbanBoard components.", deadline: "2024-08-05", order: 0 },
-    "task-3": { id: "task-3", title: "Implement drag and drop for tasks", description: "Allow tasks to be moved between columns.", deadline: "2024-08-10", order: 0 },
+    "task-2": { id: "task-2", title: "Design UI components", description: "Create TaskCard, KanbanList, KanbanBoard components.", deadline: "2024-08-05", order: 0 }, // Changed KanbanColumn to KanbanList
+    "task-3": { id: "task-3", title: "Implement drag and drop for tasks", description: "Allow tasks to be moved between lists.", deadline: "2024-08-10", order: 0 }, // Changed columns to lists
     "task-4": { id: "task-4", title: "Integrate AI task ranker", description: "Connect to GenAI flow for task prioritization.", deadline: "2024-08-15", order: 1 },
     "task-5": { id: "task-5", title: "Add share board feature (mock)", description: "Implement UI for sharing boards.", deadline: "2024-08-20", order: 0 },
     "task-6": { id: "task-6", title: "Write documentation", description: "Document components and features.", deadline: "2024-08-25", order: 2 },
   },
-  columns: {
-    "col-1": { id: "col-1", title: "Backlog", taskIds: ["task-5"], order: 0 },
-    "col-2": { id: "col-2", title: "To Do", taskIds: ["task-3", "task-4", "task-6"], order: 0 },
-    "col-3": { id: "col-3", title: "In Progress", taskIds: ["task-2"], order: 1 },
-    "col-4": { id: "col-4", title: "Done", taskIds: ["task-1"], order: 1 },
+  lists: { // Changed from columns
+    "list-1": { id: "list-1", title: "Backlog", taskIds: ["task-5"], order: 0 },
+    "list-2": { id: "list-2", title: "To Do", taskIds: ["task-3", "task-4", "task-6"], order: 0 },
+    "list-3": { id: "list-3", title: "In Progress", taskIds: ["task-2"], order: 1 },
+    "list-4": { id: "list-4", title: "Done", taskIds: ["task-1"], order: 1 },
   },
   swimlanes: {
-    "swim-1": { id: "swim-1", name: "Core Features", columnIds: ["col-2", "col-3"], order: 0, color: "#E0E7FF" }, // Light Indigo
-    "swim-2": { id: "swim-2", name: "Support & Documentation", columnIds: ["col-1", "col-4"], order: 1, color: "#FEF3C7" }, // Light Amber
+    "swim-1": { id: "swim-1", name: "Core Features", listIds: ["list-2", "list-3"], order: 0, color: "#E0E7FF" }, // Changed columnIds to listIds
+    "swim-2": { id: "swim-2", name: "Support & Documentation", listIds: ["list-1", "list-4"], order: 1, color: "#FEF3C7" }, // Changed columnIds to listIds
   },
   swimlaneOrder: ["swim-1", "swim-2"],
 };
@@ -40,25 +40,25 @@ const initialBoardData: BoardType = {
 export function KanbanBoard() {
   const [board, setBoard] = useState<BoardType>(initialBoardData);
   const [isCreateTaskFormOpen, setCreateTaskFormOpen] = useState(false);
-  const [selectedColumnIdForNewTask, setSelectedColumnIdForNewTask] = useState<string | null>(null);
+  const [selectedListIdForNewTask, setSelectedListIdForNewTask] = useState<string | null>(null); // Changed selectedColumnIdForNewTask
   const [isShareDialogOpen, setShareDialogOpen] = useState(false);
   const [isRanking, setIsRanking] = useState(false);
   const { toast } = useToast();
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const [draggedTaskInfo, setDraggedTaskInfo] = useState<{taskId: string, sourceColumnId: string} | null>(null);
+  const [draggedTaskInfo, setDraggedTaskInfo] = useState<{taskId: string, sourceListId: string} | null>(null); // Changed sourceColumnId to sourceListId
 
-  const handleOpenCreateTaskForm = (columnId: string) => {
-    setSelectedColumnIdForNewTask(columnId);
+  const handleOpenCreateTaskForm = (listId: string) => { // Changed columnId to listId
+    setSelectedListIdForNewTask(listId); // Changed setSelectedColumnIdForNewTask
     setCreateTaskFormOpen(true);
   };
 
   const handleCreateTask = (values: { title: string; description?: string; deadline?: Date }) => {
-    if (!selectedColumnIdForNewTask) return;
+    if (!selectedListIdForNewTask) return; // Changed selectedColumnIdForNewTask
 
     const newTaskId = `task-${Date.now()}`;
-    const targetColumn = board.columns[selectedColumnIdForNewTask];
-    const newTaskOrder = targetColumn ? targetColumn.taskIds.length : 0;
+    const targetList = board.lists[selectedListIdForNewTask]; // Changed targetColumn and board.columns
+    const newTaskOrder = targetList ? targetList.taskIds.length : 0;
 
     const newTask: Task = {
       id: newTaskId,
@@ -72,18 +72,18 @@ export function KanbanBoard() {
       const updatedBoard = { ...prevBoard };
       updatedBoard.tasks = { ...updatedBoard.tasks, [newTaskId]: newTask };
       
-      const newColumns = { ...prevBoard.columns };
-      if (newColumns[selectedColumnIdForNewTask]) {
-        newColumns[selectedColumnIdForNewTask] = {
-          ...newColumns[selectedColumnIdForNewTask],
-          taskIds: [...newColumns[selectedColumnIdForNewTask].taskIds, newTaskId],
+      const newLists = { ...prevBoard.lists }; // Changed newColumns
+      if (newLists[selectedListIdForNewTask]) { // Changed selectedColumnIdForNewTask
+        newLists[selectedListIdForNewTask] = { // Changed selectedColumnIdForNewTask
+          ...newLists[selectedListIdForNewTask], // Changed selectedColumnIdForNewTask
+          taskIds: [...newLists[selectedListIdForNewTask].taskIds, newTaskId], // Changed selectedColumnIdForNewTask
         };
       }
-      updatedBoard.columns = newColumns;
+      updatedBoard.lists = newLists; // Changed updatedBoard.columns
       return updatedBoard;
     });
 
-    toast({ title: "Task Created", description: `"${newTask.title}" added to column "${board.columns[selectedColumnIdForNewTask]?.title}".` });
+    toast({ title: "Task Created", description: `"${newTask.title}" added to list "${board.lists[selectedListIdForNewTask]?.title}".` }); // Changed column to list
   };
 
   const handleAddSwimlane = () => {
@@ -92,7 +92,7 @@ export function KanbanBoard() {
     const newSwimlane: SwimlaneType = {
       id: newSwimlaneId,
       name: newSwimlaneName,
-      columnIds: [],
+      listIds: [], // Changed columnIds to listIds
       order: board.swimlaneOrder.length,
       // color: // default color or let user choose later
     };
@@ -114,22 +114,22 @@ export function KanbanBoard() {
       const swimlaneToDelete = newBoard.swimlanes[swimlaneId];
       if (!swimlaneToDelete) return prevBoard;
 
-      // Remove columns associated with the swimlane and tasks within those columns
-      const newColumns = { ...newBoard.columns };
+      // Remove lists associated with the swimlane and tasks within those lists
+      const newLists = { ...newBoard.lists }; // Changed newColumns
       const newTasks = { ...newBoard.tasks };
-      swimlaneToDelete.columnIds.forEach(colId => {
-        const column = newColumns[colId];
-        if (column) {
-          column.taskIds.forEach(taskId => {
+      swimlaneToDelete.listIds.forEach(listId => { // Changed columnIds and colId to listId
+        const list = newLists[listId]; // Changed column
+        if (list) {
+          list.taskIds.forEach(taskId => {
             delete newTasks[taskId];
           });
         }
-        delete newColumns[colId];
+        delete newLists[listId]; // Changed newColumns
       });
       
       delete newBoard.swimlanes[swimlaneId];
       newBoard.swimlaneOrder = newBoard.swimlaneOrder.filter(id => id !== swimlaneId);
-      newBoard.columns = newColumns;
+      newBoard.lists = newLists; // Changed newBoard.columns
       newBoard.tasks = newTasks;
 
       return newBoard;
@@ -144,30 +144,27 @@ export function KanbanBoard() {
         title: `Card Clicked: ${task.title}`,
         description: `ID: ${taskId}. Further actions (e.g. opening a dialog) can be implemented here.`,
       });
-      // Placeholder: In a real app, you'd open a modal/dialog here
-      // e.g., setSelectedTask(task); setIsCardDetailOpen(true);
     }
   };
 
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
-    // Find the source column by iterating through all columns in all swimlanes
-    let sourceColumnId: string | undefined;
+    let sourceListId: string | undefined; // Changed sourceColumnId
     for (const swimlane of Object.values(board.swimlanes)) {
-        for (const colId of swimlane.columnIds) {
-            if (board.columns[colId]?.taskIds.includes(taskId)) {
-                sourceColumnId = colId;
+        for (const listId of swimlane.listIds) { // Changed colId to listId, swimlane.columnIds to swimlane.listIds
+            if (board.lists[listId]?.taskIds.includes(taskId)) { // Changed board.columns
+                sourceListId = listId; // Changed sourceColumnId
                 break;
             }
         }
-        if (sourceColumnId) break;
+        if (sourceListId) break; // Changed sourceColumnId
     }
 
-    if (sourceColumnId) {
+    if (sourceListId) { // Changed sourceColumnId
       event.dataTransfer.setData("taskId", taskId);
-      event.dataTransfer.setData("sourceColumnId", sourceColumnId);
+      event.dataTransfer.setData("sourceListId", sourceListId); // Changed sourceColumnId
       setDraggingTaskId(taskId);
-      setDraggedTaskInfo({taskId, sourceColumnId: sourceColumnId});
+      setDraggedTaskInfo({taskId, sourceListId: sourceListId}); // Changed sourceColumnId
       event.dataTransfer.effectAllowed = "move";
     }
   };
@@ -177,59 +174,54 @@ export function KanbanBoard() {
     setDraggedTaskInfo(null);
   };
 
-  const handleDropTask = (event: React.DragEvent<HTMLDivElement>, targetColumnId: string, targetTaskId?: string) => {
+  const handleDropTask = (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => { // Changed targetColumnId
     event.preventDefault();
     if (!draggedTaskInfo) return;
 
-    const {taskId: movedTaskId, sourceColumnId} = draggedTaskInfo;
+    const {taskId: movedTaskId, sourceListId} = draggedTaskInfo; // Changed sourceColumnId
 
     setBoard(prevBoard => {
       const newBoard = { ...prevBoard };
-      newBoard.columns = { ...prevBoard.columns }; // Shallow copy columns object
+      newBoard.lists = { ...prevBoard.lists }; // Changed newBoard.columns
       
-      // Ensure source and target columns are also shallow copied if they exist
-      const sourceColData = prevBoard.columns[sourceColumnId];
-      const targetColData = prevBoard.columns[targetColumnId];
+      const sourceListData = prevBoard.lists[sourceListId]; // Changed sourceColData, prevBoard.columns
+      const targetListData = prevBoard.lists[targetListId]; // Changed targetColData, prevBoard.columns
 
-      if (!sourceColData || !targetColData) return prevBoard;
+      if (!sourceListData || !targetListData) return prevBoard; // Changed sourceColData, targetColData
 
-      newBoard.columns[sourceColumnId] = { ...sourceColData, taskIds: [...sourceColData.taskIds] };
-      newBoard.columns[targetColumnId] = { ...targetColData, taskIds: [...targetColData.taskIds] };
+      newBoard.lists[sourceListId] = { ...sourceListData, taskIds: [...sourceListData.taskIds] }; // Changed newBoard.columns
+      newBoard.lists[targetListId] = { ...targetListData, taskIds: [...targetListData.taskIds] }; // Changed newBoard.columns
       
-      const sourceCol = newBoard.columns[sourceColumnId];
-      const targetCol = newBoard.columns[targetColumnId];
+      const sourceList = newBoard.lists[sourceListId]; // Changed sourceCol
+      const targetList = newBoard.lists[targetListId]; // Changed targetCol
 
-      // Remove from source
-      const taskIndexInSource = sourceCol.taskIds.indexOf(movedTaskId);
+      const taskIndexInSource = sourceList.taskIds.indexOf(movedTaskId);
       if (taskIndexInSource > -1) {
-        sourceCol.taskIds.splice(taskIndexInSource, 1);
+        sourceList.taskIds.splice(taskIndexInSource, 1);
       }
 
-      // Add to target and update order
       let newOrderIndex;
       if (targetTaskId) {
-        const taskIndexInTarget = targetCol.taskIds.indexOf(targetTaskId);
+        const taskIndexInTarget = targetList.taskIds.indexOf(targetTaskId);
         if (taskIndexInTarget > -1) {
-            targetCol.taskIds.splice(taskIndexInTarget, 0, movedTaskId);
+            targetList.taskIds.splice(taskIndexInTarget, 0, movedTaskId);
             newOrderIndex = taskIndexInTarget;
         } else { 
-            targetCol.taskIds.push(movedTaskId);
-            newOrderIndex = targetCol.taskIds.length -1;
+            targetList.taskIds.push(movedTaskId);
+            newOrderIndex = targetList.taskIds.length -1;
         }
       } else { 
-        targetCol.taskIds.push(movedTaskId);
-        newOrderIndex = targetCol.taskIds.length -1;
+        targetList.taskIds.push(movedTaskId);
+        newOrderIndex = targetList.taskIds.length -1;
       }
       
-      // Update order for all tasks in target column
-      targetCol.taskIds.forEach((tId, index) => {
+      targetList.taskIds.forEach((tId, index) => {
         if (newBoard.tasks[tId]) {
           newBoard.tasks[tId] = { ...newBoard.tasks[tId], order: index };
         }
       });
-       // Update order for tasks in source column if it's different from target
-      if (sourceColumnId !== targetColumnId) {
-        sourceCol.taskIds.forEach((tId, index) => {
+      if (sourceListId !== targetListId) { // Changed sourceColumnId, targetColumnId
+        sourceList.taskIds.forEach((tId, index) => { // Changed sourceCol
             if (newBoard.tasks[tId]) {
                 newBoard.tasks[tId] = { ...newBoard.tasks[tId], order: index };
             }
@@ -243,32 +235,30 @@ export function KanbanBoard() {
   };
 
   const handleRankTasks = async () => {
-    // For simplicity, let's assume AI ranking applies to the first "To Do" type column found
-    // This needs to be more robust in a real app, perhaps by selecting a column or swimlane.
-    let todoColumnId: string | undefined;
-    let todoColumn: ColumnType | undefined;
+    let todoListId: string | undefined; // Changed todoColumnId
+    let todoList: ListType | undefined; // Changed todoColumn
 
     for (const swimlaneId of board.swimlaneOrder) {
         const swimlane = board.swimlanes[swimlaneId];
-        for (const colId of swimlane.columnIds) {
-            if (board.columns[colId]?.title.toLowerCase() === "to do") {
-                todoColumnId = colId;
-                todoColumn = board.columns[colId];
+        for (const listId of swimlane.listIds) { // Changed colId to listId, swimlane.columnIds
+            if (board.lists[listId]?.title.toLowerCase() === "to do") { // Changed board.columns
+                todoListId = listId; // Changed todoColumnId
+                todoList = board.lists[listId]; // Changed todoColumn, board.columns
                 break;
             }
         }
-        if (todoColumn) break;
+        if (todoList) break; // Changed todoColumn
     }
 
-    if (!todoColumn || !todoColumnId || todoColumn.taskIds.length === 0) {
-      toast({ title: "No Tasks to Rank", description: "Could not find a 'To Do' column with tasks." });
+    if (!todoList || !todoListId || todoList.taskIds.length === 0) { // Changed todoColumn, todoColumnId
+      toast({ title: "No Tasks to Rank", description: "Could not find a 'To Do' list with tasks." }); // Changed column to list
       return;
     }
-    const finalTodoColumnId = todoColumnId; // To satisfy TypeScript in closure
+    const finalTodoListId = todoListId; // Changed finalTodoColumnId
 
     setIsRanking(true);
     try {
-      const tasksToRank: RankTasksInput["tasks"] = todoColumn.taskIds
+      const tasksToRank: RankTasksInput["tasks"] = todoList.taskIds // Changed todoColumn
         .map(taskId => board.tasks[taskId])
         .filter(task => task) 
         .map(task => ({
@@ -278,7 +268,7 @@ export function KanbanBoard() {
         }));
 
       if (tasksToRank.length === 0) {
-         toast({ title: "No Tasks to Rank", description: "No valid tasks found in 'To Do' column." });
+         toast({ title: "No Tasks to Rank", description: "No valid tasks found in 'To Do' list." }); // Changed column to list
          setIsRanking(false);
          return;
       }
@@ -287,11 +277,11 @@ export function KanbanBoard() {
 
       setBoard(prevBoard => {
         const newBoard = { ...prevBoard };
-        const newColumns = { ...newBoard.columns };
-        const targetCol = newColumns[finalTodoColumnId];
-        if (!targetCol) return prevBoard;
+        const newLists = { ...newBoard.lists }; // Changed newColumns
+        const targetList = newLists[finalTodoListId]; // Changed targetCol, finalTodoColumnId
+        if (!targetList) return prevBoard; // Changed targetCol
 
-        const currentTodoTaskIds = [...targetCol.taskIds];
+        const currentTodoTaskIds = [...targetList.taskIds]; // Changed targetCol
         const rankedTaskIds = rankedResults
           .sort((a, b) => a.rank - b.rank)
           .map(r => r.id);
@@ -299,23 +289,22 @@ export function KanbanBoard() {
         const newOrderedTaskIds = rankedTaskIds.filter(id => currentTodoTaskIds.includes(id));
         const unrankedTasks = currentTodoTaskIds.filter(id => !newOrderedTaskIds.includes(id));
         
-        const finalTaskIds = [...newOrderedTaskIds, ...unrankedTasks];
-        newColumns[finalTodoColumnId] = { ...targetCol, taskIds: finalTaskIds };
+        const finalListTaskIds = [...newOrderedTaskIds, ...unrankedTasks];
+        newLists[finalTodoListId] = { ...targetList, taskIds: finalListTaskIds }; // Changed newColumns, finalTodoColumnId, targetCol
 
-        // Update order property for tasks in the ranked column
         const newTasks = { ...newBoard.tasks };
-        finalTaskIds.forEach((taskId, index) => {
+        finalListTaskIds.forEach((taskId, index) => {
           if (newTasks[taskId]) {
             newTasks[taskId] = { ...newTasks[taskId], order: index };
           }
         });
         
-        newBoard.columns = newColumns;
+        newBoard.lists = newLists; // Changed newBoard.columns
         newBoard.tasks = newTasks;
         return newBoard;
       });
 
-      toast({ title: "Tasks Ranked", description: `Tasks in "${todoColumn.title}" column have been reordered by AI.` });
+      toast({ title: "Tasks Ranked", description: `Tasks in "${todoList.title}" list have been reordered by AI.` }); // Changed column to list
     } catch (error) {
       console.error("Error ranking tasks:", error);
       toast({ variant: "destructive", title: "Ranking Failed", description: "Could not rank tasks. Please try again." });
@@ -334,23 +323,22 @@ export function KanbanBoard() {
         onAddSwimlane={handleAddSwimlane}
         isRanking={isRanking}
       />
-      <div className="flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden p-1"> {/* Changed to flex-col for vertical swimlanes */}
+      <div className="flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden p-1">
         {board.swimlaneOrder.map(swimlaneId => {
           const swimlane = board.swimlanes[swimlaneId];
           if (!swimlane) return null;
           
-          const columnsInSwimlane = swimlane.columnIds
-            .map(colId => board.columns[colId])
-            .filter(Boolean) as ColumnType[];
+          const listsInSwimlane = swimlane.listIds // Changed columnsInSwimlane, swimlane.columnIds
+            .map(listId => board.lists[listId]) // Changed colId, board.columns
+            .filter(Boolean) as ListType[]; // Changed ColumnType
           
-          // Sort columns by their order property
-          columnsInSwimlane.sort((a, b) => a.order - b.order);
+          listsInSwimlane.sort((a, b) => a.order - b.order); // Changed columnsInSwimlane
 
           return (
             <KanbanSwimlane
               key={swimlane.id}
               swimlane={swimlane}
-              columns={columnsInSwimlane}
+              lists={listsInSwimlane} // Changed columns to lists
               tasks={board.tasks}
               onOpenCreateTaskForm={handleOpenCreateTaskForm}
               onDropTask={handleDropTask}

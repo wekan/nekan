@@ -5,10 +5,10 @@ export interface Task {
   description?: string;
   deadline?: string; // YYYY-MM-DD
   color?: string; // Hex color string, e.g., "#RRGGBB"
-  order: number; // For ordering within a column
+  order: number; // For ordering within a list
 }
 
-export interface Column {
+export interface List {
   id: string;
   title: string;
   taskIds: string[];
@@ -19,7 +19,7 @@ export interface Column {
 export interface Swimlane {
   id: string;
   name: string;
-  columnIds: string[];
+  listIds: string[]; // Changed from columnIds
   color?: string; // Hex color string
   order: number; // For ordering swimlanes on the board
 }
@@ -28,7 +28,7 @@ export interface Board {
   id: string;
   name: string;
   swimlanes: Record<string, Swimlane>;
-  columns: Record<string, Column>;
+  lists: Record<string, List>; // Changed from columns
   tasks: Record<string, Task>;
   swimlaneOrder: string[]; // Array of swimlane IDs to maintain order
 }
