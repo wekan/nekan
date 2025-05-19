@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { rankTasks, RankTasksInput } from "@/ai/flows/rank-tasks";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 // Initial hardcoded data with swimlanes
 const initialBoardData: BoardType = {
@@ -20,18 +21,18 @@ const initialBoardData: BoardType = {
     "task-2": { id: "task-2", title: "Design UI components", description: "Create TaskCard, KanbanList, KanbanBoard components.", deadline: "2024-08-05", order: 0, color: "#FFFFFF" },
     "task-3": { id: "task-3", title: "Implement drag and drop for tasks", description: "Allow tasks to be moved between lists.", deadline: "2024-08-10", order: 0, color: "#FFFFFF" },
     "task-4": { id: "task-4", title: "Integrate AI task ranker", description: "Connect to GenAI flow for task prioritization.", deadline: "2024-08-15", order: 1, color: "#FFFFFF" },
-    "task-5": { id: "task-5", title: "Add share board feature (mock)", description: "Implement UI for sharing boards.", deadline: "2024-08-20", order: 0, color: "#FFF5E1" }, // Example color
+    "task-5": { id: "task-5", title: "Add share board feature (mock)", description: "Implement UI for sharing boards.", deadline: "2024-08-20", order: 0, color: "#FFF5E1" },
     "task-6": { id: "task-6", title: "Write documentation", description: "Document components and features.", deadline: "2024-08-25", order: 2, color: "#FFFFFF" },
   },
   lists: {
-    "list-1": { id: "list-1", title: "Backlog", taskIds: ["task-5"], order: 0, color: "#F3F4F6" }, // Example color
+    "list-1": { id: "list-1", title: "Backlog", taskIds: ["task-5"], order: 0, color: "#F3F4F6" },
     "list-2": { id: "list-2", title: "To Do", taskIds: ["task-3", "task-4", "task-6"], order: 0, color: "#FFFFFF" },
     "list-3": { id: "list-3", title: "In Progress", taskIds: ["task-2"], order: 1, color: "#FFFFFF" },
-    "list-4": { id: "list-4", title: "Done", taskIds: ["task-1"], order: 1, color: "#E0F2FE" }, // Example color
+    "list-4": { id: "list-4", title: "Done", taskIds: ["task-1"], order: 2, color: "#E0F2FE" },
   },
   swimlanes: {
     "swim-1": { id: "swim-1", name: "Core Features", listIds: ["list-2", "list-3"], order: 0, color: "#E0E7FF" },
-    "swim-2": { id: "swim-2", name: "Support & Documentation", listIds: ["list-1", "list-4"], order: 1, color: "#FEF3C7" },
+    "swim-2": { id: "swim-2", name: "Support & Docs", listIds: ["list-1", "list-4"], order: 1, color: "#FEF3C7" },
   },
   swimlaneOrder: ["swim-1", "swim-2"],
 };
@@ -45,8 +46,15 @@ export function KanbanBoard() {
   const [isRanking, setIsRanking] = useState(false);
   const { toast } = useToast();
 
+  // State for D&D
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [draggedTaskInfo, setDraggedTaskInfo] = useState<{taskId: string, sourceListId: string} | null>(null);
+  const [draggingListId, setDraggingListId] = useState<string | null>(null);
+  const [draggedListInfo, setDraggedListInfo] = useState<{ listId: string; sourceSwimlaneId: string; sourceListIndex: number } | null>(null);
+  const [dropTargetListId, setDropTargetListId] = useState<string | null>(null); // For list drop indicator
+  const [draggingSwimlaneId, setDraggingSwimlaneId] = useState<string | null>(null);
+  const [dropTargetSwimlaneId, setDropTargetSwimlaneId] = useState<string | null>(null); // For swimlane drop indicator
+
 
   const handleOpenCreateTaskForm = (listId: string) => {
     setSelectedListIdForNewTask(listId);
@@ -66,7 +74,7 @@ export function KanbanBoard() {
       description: values.description,
       deadline: values.deadline ? format(values.deadline, "yyyy-MM-dd") : undefined,
       order: newTaskOrder,
-      color: "#FFFFFF", // Default color for new tasks
+      color: "#FFFFFF", 
     };
 
     setBoard(prevBoard => {
@@ -95,7 +103,7 @@ export function KanbanBoard() {
       name: newSwimlaneName,
       listIds: [],
       order: board.swimlaneOrder.length,
-      color: "#F9FAFB", // Default color for new swimlanes
+      color: "#F9FAFB", 
     };
 
     setBoard(prevBoard => ({
@@ -132,6 +140,13 @@ export function KanbanBoard() {
       newBoard.lists = newLists;
       newBoard.tasks = newTasks;
 
+      // Re-order remaining swimlanes
+      newBoard.swimlaneOrder.forEach((sId, index) => {
+        if (newBoard.swimlanes[sId]) {
+          newBoard.swimlanes[sId].order = index;
+        }
+      });
+
       return newBoard;
     });
     toast({ title: "Swimlane Deleted", description: `Swimlane and its contents have been deleted.` });
@@ -142,15 +157,14 @@ export function KanbanBoard() {
     if (task) {
       toast({
         title: `Card Clicked: ${task.title}`,
-        description: `ID: ${taskId}. Further actions (e.g. opening a dialog) can be implemented here.`,
+        description: `ID: ${taskId}. Details: ${task.description || 'No description'}. Deadline: ${task.deadline || 'None'}`,
       });
     }
   };
 
-
-  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
+  // Task D&D Handlers
+  const handleDragTaskStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
     let sourceListId: string | undefined;
-    // Find the source list by iterating through swimlanes and their lists
     for (const swimlane of Object.values(board.swimlanes)) {
         for (const listId of swimlane.listIds) {
             if (board.lists[listId]?.taskIds.includes(taskId)) {
@@ -163,78 +177,53 @@ export function KanbanBoard() {
 
     if (sourceListId) {
       event.dataTransfer.setData("taskId", taskId);
-      event.dataTransfer.setData("sourceListId", sourceListId); // Though we use state, this can be useful
+      event.dataTransfer.setData("sourceListId", sourceListId);
       setDraggingTaskId(taskId);
       setDraggedTaskInfo({taskId, sourceListId: sourceListId});
       event.dataTransfer.effectAllowed = "move";
     }
   };
 
-  const handleDragEnd = () => {
+  const handleDragTaskEnd = () => {
     setDraggingTaskId(null);
     setDraggedTaskInfo(null);
   };
 
   const handleDropTask = (event: React.DragEvent<HTMLDivElement>, currentTargetListId: string, currentTargetTaskId?: string) => {
     event.preventDefault();
-    if (!draggedTaskInfo) {
-      console.warn("draggedTaskInfo is null in handleDropTask");
-      return;
-    }
+    if (!draggedTaskInfo) return;
   
     const { taskId: movedTaskId, sourceListId: currentSourceListId } = draggedTaskInfo;
   
     setBoard(prevBoard => {
       const newBoardState = { ...prevBoard };
-      const newListsState = { ...newBoardState.lists }; // Shallow copy of the lists map
+      const newListsState = { ...newBoardState.lists };
   
-      // Get task IDs from the source list
       const sourceListTaskIdsCopy = [...newListsState[currentSourceListId].taskIds];
       const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
   
-      if (taskIndexInSource === -1) {
-        // This should ideally not happen if dragStart was correct
-        console.warn(`Task ${movedTaskId} not found in source list ${currentSourceListId}. Aborting drop.`);
-        return prevBoard;
-      }
+      if (taskIndexInSource === -1) return prevBoard;
   
-      // 1. Remove task from (copied) source task IDs
       sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
   
       let finalTaskIdsForTargetList;
   
       if (currentSourceListId === currentTargetListId) {
-        // Moving within the same list
-        // Operate on the array that already had the task removed
-        finalTaskIdsForTargetList = [...sourceListTaskIdsCopy]; 
-  
-        if (currentTargetTaskId) { // Dropping onto an existing task in the same list
-          const insertAtIndex = finalTaskIdsForTargetList.indexOf(currentTargetTaskId);
-          if (insertAtIndex > -1) {
-            finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
-          } else {
-            // If currentTargetTaskId is not found (e.g., it was the movedTaskId itself and now removed, or some other edge case)
-            finalTaskIdsForTargetList.push(movedTaskId); // Append to be safe
-          }
-        } else { // Dropping into an empty area of the same list
+        finalTaskIdsForTargetList = [...sourceListTaskIdsCopy];
+        const insertAtIndex = currentTargetTaskId ? finalTaskIdsForTargetList.indexOf(currentTargetTaskId) : -1;
+        if (insertAtIndex > -1) {
+          finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
+        } else {
           finalTaskIdsForTargetList.push(movedTaskId);
         }
         newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], taskIds: finalTaskIdsForTargetList };
       } else {
-        // Moving to a different list
-        // First, update the source list with the task removed
         newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], taskIds: sourceListTaskIdsCopy };
-  
-        // Now, prepare the target list
         finalTaskIdsForTargetList = [...newListsState[currentTargetListId].taskIds];
-        if (currentTargetTaskId) { // Dropping onto an existing task in the new list
-          const insertAtIndex = finalTaskIdsForTargetList.indexOf(currentTargetTaskId);
-          if (insertAtIndex > -1) {
-            finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
-          } else {
-            finalTaskIdsForTargetList.push(movedTaskId); // Fallback: append if target not found
-          }
-        } else { // Dropping into an empty area of the new list
+        const insertAtIndex = currentTargetTaskId ? finalTaskIdsForTargetList.indexOf(currentTargetTaskId) : -1;
+        if (insertAtIndex > -1) {
+          finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
+        } else {
           finalTaskIdsForTargetList.push(movedTaskId);
         }
         newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], taskIds: finalTaskIdsForTargetList };
@@ -242,7 +231,6 @@ export function KanbanBoard() {
   
       newBoardState.lists = newListsState;
   
-      // Update task 'order' property for all tasks in affected lists
       const affectedListIds = new Set([currentSourceListId, currentTargetListId]);
       const newTasksState = { ...newBoardState.tasks };
   
@@ -265,12 +253,203 @@ export function KanbanBoard() {
     setDraggedTaskInfo(null);
   };
   
+  // Swimlane D&D Handlers
+  const handleSwimlaneDragStart = (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => {
+    event.dataTransfer.setData("swimlaneId", swimlaneId);
+    setDraggingSwimlaneId(swimlaneId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleSwimlaneDragOver = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
+    event.preventDefault();
+    if (draggingSwimlaneId && draggingSwimlaneId !== targetSwimlaneId) {
+      setDropTargetSwimlaneId(targetSwimlaneId); // Visual cue for dropping before this swimlane
+    }
+    event.dataTransfer.dropEffect = "move";
+  };
+  
+  const handleBoardAreaDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (draggingSwimlaneId) {
+        setDropTargetSwimlaneId("end-of-board"); // Visual cue for dropping at the end
+    }
+    event.dataTransfer.dropEffect = "move";
+  };
+
+  const handleSwimlaneDrop = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId?: string) => { // targetSwimlaneId is optional for end-of-board drop
+    event.preventDefault();
+    const movedSwimlaneId = event.dataTransfer.getData("swimlaneId");
+
+    if (!movedSwimlaneId || (targetSwimlaneId && movedSwimlaneId === targetSwimlaneId)) {
+      setDropTargetSwimlaneId(null);
+      setDraggingSwimlaneId(null);
+      return;
+    }
+
+    setBoard(prevBoard => {
+      const newBoard = { ...prevBoard };
+      let newSwimlaneOrder = [...newBoard.swimlaneOrder];
+      
+      const sourceIndex = newSwimlaneOrder.indexOf(movedSwimlaneId);
+      if (sourceIndex === -1) return prevBoard; // Should not happen
+
+      newSwimlaneOrder.splice(sourceIndex, 1); // Remove from old position
+
+      if (targetSwimlaneId && targetSwimlaneId !== "end-of-board") {
+        const targetIndex = newSwimlaneOrder.indexOf(targetSwimlaneId);
+        newSwimlaneOrder.splice(targetIndex, 0, movedSwimlaneId); // Insert before target
+      } else {
+        newSwimlaneOrder.push(movedSwimlaneId); // Insert at the end
+      }
+      
+      newBoard.swimlaneOrder = newSwimlaneOrder;
+      newBoard.swimlaneOrder.forEach((id, index) => {
+        if (newBoard.swimlanes[id]) newBoard.swimlanes[id].order = index;
+      });
+      return newBoard;
+    });
+
+    setDraggingSwimlaneId(null);
+    setDropTargetSwimlaneId(null);
+  };
+
+  const handleSwimlaneDragEnd = () => {
+    setDraggingSwimlaneId(null);
+    setDropTargetSwimlaneId(null);
+  };
+
+
+  // List D&D Handlers
+  const handleListDragStart = (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => {
+    const sourceSwimlane = board.swimlanes[sourceSwimlaneId];
+    const sourceListIndex = sourceSwimlane.listIds.indexOf(listId);
+
+    event.dataTransfer.setData("listId", listId);
+    event.dataTransfer.setData("sourceSwimlaneId", sourceSwimlaneId);
+    setDraggingListId(listId);
+    setDraggedListInfo({ listId, sourceSwimlaneId, sourceListIndex });
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleListDragOver = (event: React.DragEvent<HTMLDivElement>, targetListId: string) => {
+    event.preventDefault();
+    if (draggingListId && draggingListId !== targetListId) {
+      setDropTargetListId(targetListId); // Visual cue for dropping before this list
+    } else if (draggingListId && draggingListId === targetListId) {
+      setDropTargetListId(null); // Don't show indicator if hovering over itself
+    }
+    event.dataTransfer.dropEffect = "move";
+  };
+  
+  const handleSwimlaneAreaDragOverForList = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
+    event.preventDefault();
+    if (draggingListId) {
+        const targetSwimlane = board.swimlanes[targetSwimlaneId];
+        // If target swimlane has no lists, or if we are over the general area (not a specific list)
+        // We can indicate dropping at the end of this swimlane.
+        if (targetSwimlane && targetSwimlane.listIds.length === 0) {
+             setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
+        } else if (targetSwimlane && !dropTargetListId?.startsWith('between-') && dropTargetListId !== targetSwimlaneId) {
+            // This condition tries to default to end of swimlane if not over another list
+            // It might need refinement based on exact DOM structure for dragOver events on list container vs lists
+            setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
+        }
+    }
+    event.dataTransfer.dropEffect = "move";
+  };
+
+
+  const handleListDropOnList = (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetSwimlaneId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!draggedListInfo || draggedListInfo.listId === targetListId) {
+      setDropTargetListId(null);
+      return;
+    }
+
+    const { listId: movedListId, sourceSwimlaneId } = draggedListInfo;
+
+    setBoard(prevBoard => {
+      const newBoard = { ...prevBoard };
+      const newSwimlanes = { ...newBoard.swimlanes };
+
+      // Remove from source swimlane
+      const sourceSwimlane = { ...newSwimlanes[sourceSwimlaneId] };
+      sourceSwimlane.listIds = sourceSwimlane.listIds.filter(id => id !== movedListId);
+      newSwimlanes[sourceSwimlaneId] = sourceSwimlane;
+
+      // Add to target swimlane
+      const targetSwimlane = { ...newSwimlanes[targetSwimlaneId] };
+      const targetIndex = targetSwimlane.listIds.indexOf(targetListId);
+      if (targetIndex !== -1) {
+        targetSwimlane.listIds.splice(targetIndex, 0, movedListId);
+      } else { // Should not happen if targetListId is valid
+        targetSwimlane.listIds.push(movedListId);
+      }
+      newSwimlanes[targetSwimlaneId] = targetSwimlane;
+      
+      // Update list orders in both swimlanes
+      [sourceSwimlaneId, targetSwimlaneId].forEach(sId => {
+        newSwimlanes[sId].listIds.forEach((lId, index) => {
+          if (newBoard.lists[lId]) newBoard.lists[lId].order = index;
+        });
+      });
+
+      newBoard.swimlanes = newSwimlanes;
+      return newBoard;
+    });
+    setDraggingListId(null);
+    setDraggedListInfo(null);
+    setDropTargetListId(null);
+  };
+
+  const handleListDropOnSwimlaneArea = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!draggedListInfo) return;
+
+    const { listId: movedListId, sourceSwimlaneId } = draggedListInfo;
+
+    setBoard(prevBoard => {
+      const newBoard = { ...prevBoard };
+      const newSwimlanes = { ...newBoard.swimlanes };
+
+      // Remove from source swimlane
+      const sourceSwimlane = { ...newSwimlanes[sourceSwimlaneId] };
+      sourceSwimlane.listIds = sourceSwimlane.listIds.filter(id => id !== movedListId);
+      newSwimlanes[sourceSwimlaneId] = sourceSwimlane;
+
+      // Add to end of target swimlane
+      const targetSwimlane = { ...newSwimlanes[targetSwimlaneId] };
+      targetSwimlane.listIds.push(movedListId);
+      newSwimlanes[targetSwimlaneId] = targetSwimlane;
+
+      // Update list orders
+      [sourceSwimlaneId, targetSwimlaneId].forEach(sId => {
+        newSwimlanes[sId].listIds.forEach((lId, index) => {
+          if (newBoard.lists[lId]) newBoard.lists[lId].order = index;
+        });
+      });
+      
+      newBoard.swimlanes = newSwimlanes;
+      return newBoard;
+    });
+    setDraggingListId(null);
+    setDraggedListInfo(null);
+    setDropTargetListId(null);
+  };
+
+  const handleListDragEnd = () => {
+    setDraggingListId(null);
+    setDraggedListInfo(null);
+    setDropTargetListId(null);
+  };
+
 
   const handleRankTasks = async () => {
     let todoListId: string | undefined;
     let todoList: ListType | undefined;
 
-    // Find "To Do" list across all swimlanes
     for (const swimlaneId of board.swimlaneOrder) {
         const swimlane = board.swimlanes[swimlaneId];
         for (const listId of swimlane.listIds) {
@@ -287,16 +466,16 @@ export function KanbanBoard() {
       toast({ title: "No Tasks to Rank", description: "Could not find a 'To Do' list with tasks." });
       return;
     }
-    const finalTodoListId = todoListId; // Capture for use in closure
+    const finalTodoListId = todoListId; 
 
     setIsRanking(true);
     try {
       const tasksToRank: RankTasksInput["tasks"] = todoList.taskIds
         .map(taskId => board.tasks[taskId])
-        .filter(task => task) // Ensure task exists
+        .filter(task => task) 
         .map(task => ({
           id: task.id,
-          description: task.description || task.title, // Use title if description is empty
+          description: task.description || task.title, 
           deadline: task.deadline,
         }));
 
@@ -311,29 +490,21 @@ export function KanbanBoard() {
       setBoard(prevBoard => {
         const newBoard = { ...prevBoard };
         const newLists = { ...newBoard.lists };
-        const targetList = newLists[finalTodoListId]; // Use captured list ID
-        if (!targetList) return prevBoard; // Should not happen
+        const targetList = newLists[finalTodoListId]; 
+        if (!targetList) return prevBoard; 
 
-        // Get current task IDs in the "To Do" list to ensure only existing tasks are reordered
         const currentTodoTaskIds = [...targetList.taskIds];
-        
-        // Create a map of rank per task ID for easier lookup
         const rankMap = new Map(rankedResults.map(r => [r.id, r.rank]));
-
-        // Sort existing task IDs based on AI rank, unranked tasks go to the bottom
         const newOrderedTaskIds = [...currentTodoTaskIds].sort((aId, bId) => {
             const rankA = rankMap.get(aId);
             const rankB = rankMap.get(bId);
-
             if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
-            if (rankA !== undefined) return -1; // a is ranked, b is not -> a comes first
-            if (rankB !== undefined) return 1;  // b is ranked, a is not -> b comes first
-            return 0; // neither is ranked by AI, keep original relative order (or could use task.order)
+            if (rankA !== undefined) return -1; 
+            if (rankB !== undefined) return 1;  
+            return 0; 
         });
         
         newLists[finalTodoListId] = { ...targetList, taskIds: newOrderedTaskIds };
-
-        // Update order property for tasks in the sorted list
         const newTasks = { ...newBoard.tasks };
         newOrderedTaskIds.forEach((taskId, index) => {
           if (newTasks[taskId]) {
@@ -407,37 +578,72 @@ export function KanbanBoard() {
         onAddSwimlane={handleAddSwimlane}
         isRanking={isRanking}
       />
-      <div className="flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden p-1">
-        {board.swimlaneOrder.map(swimlaneId => {
+      <div 
+        className="flex-1 flex flex-col gap-6 overflow-y-auto overflow-x-hidden p-1"
+        onDragOver={handleBoardAreaDragOver} // For dropping swimlanes at the end of the board
+        onDrop={(e) => handleSwimlaneDrop(e)} // No targetSwimlaneId means end of board
+      >
+        {board.swimlaneOrder.map((swimlaneId, index) => {
           const swimlane = board.swimlanes[swimlaneId];
           if (!swimlane) return null;
           
           const listsInSwimlane = swimlane.listIds
             .map(listId => board.lists[listId])
-            .filter(Boolean) as ListType[]; // Ensure list exists
+            .filter(Boolean) as ListType[]; 
           
-          // Sort lists based on their order property, if available
           listsInSwimlane.sort((a, b) => a.order - b.order);
 
           return (
-            <KanbanSwimlane
-              key={swimlane.id}
-              swimlane={swimlane}
-              lists={listsInSwimlane}
-              tasks={board.tasks}
-              onOpenCreateTaskForm={handleOpenCreateTaskForm}
-              onDropTask={handleDropTask}
-              onDragTaskStart={handleDragStart}
-              onDragTaskEnd={handleDragEnd}
-              draggingTaskId={draggingTaskId}
-              onDeleteSwimlane={handleDeleteSwimlane}
-              onOpenCard={handleOpenCard}
-              onSetSwimlaneColor={handleSetSwimlaneColor}
-              onSetListColor={handleSetListColor}
-              onSetTaskColor={handleSetTaskColor}
-            />
+            // This div acts as the drop target *before* the current swimlane
+            <div
+              key={`swimlane-dropzone-${swimlaneId}`}
+              onDragOver={(e) => handleSwimlaneDragOver(e, swimlaneId)}
+              // onDrop is handled by the child KanbanSwimlane's main div for precise targeting or by the board area for end-of-board.
+              // This specific div is more for the visual indicator when dragging *over* where a swimlane *would* go.
+              className={cn(
+                "p-0 rounded-lg", // Minimal padding for the drop zone visual
+                 // dropTargetSwimlaneId === swimlaneId handles dropping *before* this swimlane
+                dropTargetSwimlaneId === swimlaneId && draggingSwimlaneId && draggingSwimlaneId !== swimlaneId ? "pt-2" : "" 
+              )}
+            >
+              <KanbanSwimlane
+                key={swimlane.id}
+                swimlane={swimlane}
+                lists={listsInSwimlane}
+                tasks={board.tasks}
+                onOpenCreateTaskForm={handleOpenCreateTaskForm}
+                onDropTask={handleDropTask}
+                onDragTaskStart={handleDragTaskStart}
+                onDragTaskEnd={handleDragTaskEnd}
+                draggingTaskId={draggingTaskId}
+                onDeleteSwimlane={handleDeleteSwimlane}
+                onOpenCard={handleOpenCard}
+                onSetSwimlaneColor={handleSetSwimlaneColor}
+                onSetListColor={handleSetListColor}
+                onSetTaskColor={handleSetTaskColor}
+                // Swimlane D&D
+                onSwimlaneDragStart={handleSwimlaneDragStart}
+                onSwimlaneDrop={handleSwimlaneDrop} // Pass this for dropping onto a swimlane
+                onSwimlaneDragEnd={handleSwimlaneDragEnd}
+                draggingSwimlaneId={draggingSwimlaneId}
+                dropTargetSwimlaneId={dropTargetSwimlaneId}
+                // List D&D
+                onListDragStart={handleListDragStart}
+                onListDropOnList={handleListDropOnList}
+                onListDropOnSwimlaneArea={handleListDropOnSwimlaneArea}
+                onListDragEnd={handleListDragEnd}
+                draggingListId={draggingListId}
+                dropTargetListId={dropTargetListId}
+              />
+            </div>
           );
         })}
+         {/* Visual indicator for dropping a swimlane at the very end of the board */}
+        {dropTargetSwimlaneId === "end-of-board" && draggingSwimlaneId && (
+            <div className="h-12 border-2 border-dashed border-primary rounded-lg flex items-center justify-center text-primary my-2">
+                Drop swimlane here
+            </div>
+        )}
       </div>
       <CreateTaskForm
         isOpen={isCreateTaskFormOpen}
@@ -452,4 +658,3 @@ export function KanbanBoard() {
     </div>
   );
 }
-
