@@ -11,7 +11,7 @@ import { rankTasks, RankTasksInput } from "@/ai/flows/rank-tasks";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { AddSwimlaneDialog } from "./AddSwimlaneDialog"; // Added import
+import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 
 // Initial hardcoded data with swimlanes
 const initialBoardData: BoardType = {
@@ -252,34 +252,29 @@ export function KanbanBoard() {
       let sourceListTaskIdsCopy = [...newListsState[currentSourceListId].taskIds];
       const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
   
-      if (taskIndexInSource === -1) return prevBoard; // Should not happen
+      if (taskIndexInSource === -1) return prevBoard; 
   
-      // Remove from source
       sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
   
       let finalTaskIdsForTargetList;
   
       if (currentSourceListId === currentTargetListId) {
-        // Moving within the same list
-        finalTaskIdsForTargetList = [...sourceListTaskIdsCopy]; // Use the already modified array
+        finalTaskIdsForTargetList = [...sourceListTaskIdsCopy]; 
       } else {
-        // Moving to a different list
         newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], taskIds: sourceListTaskIdsCopy };
         finalTaskIdsForTargetList = [...newListsState[currentTargetListId].taskIds];
       }
       
-      // Add to target
       const insertAtIndex = currentTargetTaskId ? finalTaskIdsForTargetList.indexOf(currentTargetTaskId) : -1;
       if (insertAtIndex > -1) {
         finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
       } else {
-        finalTaskIdsForTargetList.push(movedTaskId); // Add to the end if no target task or target task not found
+        finalTaskIdsForTargetList.push(movedTaskId); 
       }
       newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], taskIds: finalTaskIdsForTargetList };
       
       newBoardState.lists = newListsState;
   
-      // Update task orders in both source and target lists
       const affectedListIds = new Set([currentSourceListId, currentTargetListId]);
       const newTasksState = { ...newBoardState.tasks };
   
@@ -311,22 +306,31 @@ export function KanbanBoard() {
 
   const handleSwimlaneDragOver = (event: React.DragEvent<HTMLDivElement>, hoverSwimlaneId: string) => {
     event.preventDefault();
+    event.stopPropagation(); // Prevent board area drag over from firing
     if (draggingSwimlaneId && draggingSwimlaneId !== hoverSwimlaneId) {
-      setDropTargetSwimlaneId(hoverSwimlaneId); // Set target to insert BEFORE hoverSwimlaneId
+      setDropTargetSwimlaneId(hoverSwimlaneId); 
     }
     event.dataTransfer.dropEffect = "move";
   };
   
   const handleBoardAreaDragOver = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (draggingSwimlaneId) {
-        setDropTargetSwimlaneId("end-of-board"); // Target is the end of the board
+    // Only set to 'end-of-board' if not already targeting a specific swimlane via its own onDragOver
+    if (draggingSwimlaneId) { 
+        // A more precise check might be needed if dropTargetSwimlaneId is managed by direct swimlane hover
+        // For now, this assumes if mouse is on board area, it's the end.
+        // This could be improved by checking if any specific swimlane has set dropTargetSwimlaneId.
+        // If no specific swimlane has been targeted (e.g. mouse quickly left a swimlane), then it's the end.
+        // This check relies on handleSwimlaneDragOver setting a non-null dropTargetSwimlaneId.
+        // If we are here, it implies mouse isn't over a specific swimlane enough to trigger its onDragOver.
+        setDropTargetSwimlaneId("end-of-board");
     }
     event.dataTransfer.dropEffect = "move";
   };
 
   const handleSwimlaneDrop = (event: React.DragEvent<HTMLDivElement>, beforeSwimlaneId?: string) => { 
     event.preventDefault();
+    event.stopPropagation();
     const movedSwimlaneId = event.dataTransfer.getData("swimlaneId");
 
     if (!movedSwimlaneId || (beforeSwimlaneId && movedSwimlaneId === beforeSwimlaneId)) {
@@ -356,7 +360,6 @@ export function KanbanBoard() {
       }
       
       newBoard.swimlaneOrder = newSwimlaneOrder;
-      // Update order property for all swimlanes
       newBoard.swimlaneOrder.forEach((id, index) => {
         if (newBoard.swimlanes[id]) newBoard.swimlanes[id].order = index;
       });
@@ -376,7 +379,7 @@ export function KanbanBoard() {
   // List D&D Handlers
   const handleListDragStart = (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => {
     const sourceSwimlane = board.swimlanes[sourceSwimlaneId];
-    if (!sourceSwimlane) return; // Guard against missing swimlane
+    if (!sourceSwimlane) return;
     const sourceListIndex = sourceSwimlane.listIds.indexOf(listId);
 
     event.dataTransfer.setData("listId", listId);
@@ -388,6 +391,7 @@ export function KanbanBoard() {
 
   const handleListDragOver = (event: React.DragEvent<HTMLDivElement>, targetListId: string) => {
     event.preventDefault(); 
+    event.stopPropagation();
     if (draggingListId && draggingListId !== targetListId) {
       setDropTargetListId(targetListId); 
     } else if (draggingListId && draggingListId === targetListId) {
@@ -398,17 +402,14 @@ export function KanbanBoard() {
   
   const handleSwimlaneAreaDragOverForList = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
     event.preventDefault(); 
+    event.stopPropagation();
     if (draggingListId) {
         const targetSwimlane = board.swimlanes[targetSwimlaneId];
         if (targetSwimlane && targetSwimlane.listIds.length === 0 && draggedListInfo?.sourceSwimlaneId !== targetSwimlaneId) {
              setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
         } else if (targetSwimlane && !dropTargetListId?.startsWith('end-of-swimlane-') && !targetSwimlane.listIds.includes(dropTargetListId || "")) {
-            // Set to end of swimlane if not already targeting a list within it,
-            // and not already targeting the end of another swimlane.
             setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
         } else if (targetSwimlane && targetSwimlane.listIds.length > 0 && !dropTargetListId) {
-             // If dragging over a swimlane that has lists but no specific list is targeted yet,
-             // default to targeting the end of that swimlane for list drop.
             setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
         }
     }
@@ -432,12 +433,10 @@ export function KanbanBoard() {
       const newBoard = { ...prevBoard };
       const newSwimlanes = { ...newBoard.swimlanes };
 
-      // Remove from source swimlane
       const sourceSwimlane = { ...newSwimlanes[sourceSwimlaneId] };
       sourceSwimlane.listIds = sourceSwimlane.listIds.filter(id => id !== movedListId);
       newSwimlanes[sourceSwimlaneId] = sourceSwimlane;
 
-      // Add to target swimlane
       const targetSwimlane = { ...newSwimlanes[targetSwimlaneId] };
       const targetIndex = targetSwimlane.listIds.indexOf(targetListId);
       if (targetIndex !== -1) {
@@ -448,7 +447,7 @@ export function KanbanBoard() {
       newSwimlanes[targetSwimlaneId] = targetSwimlane;
       
       [sourceSwimlaneId, targetSwimlaneId].forEach(sId => {
-        if (newSwimlanes[sId]) { // Check if swimlane exists
+        if (newSwimlanes[sId]) { 
             newSwimlanes[sId].listIds.forEach((lId, index) => {
             if (newBoard.lists[lId]) newBoard.lists[lId].order = index;
             });
@@ -490,7 +489,7 @@ export function KanbanBoard() {
       newSwimlanes[targetSwimlaneId] = targetSwimlane;
 
       [sourceSwimlaneId, targetSwimlaneId].forEach(sId => {
-         if (newSwimlanes[sId]) { // Check if swimlane exists
+         if (newSwimlanes[sId]) { 
             newSwimlanes[sId].listIds.forEach((lId, index) => {
             if (newBoard.lists[lId]) newBoard.lists[lId].order = index;
             });
@@ -668,7 +667,12 @@ export function KanbanBoard() {
               {draggingSwimlaneId && draggingSwimlaneId !== swimlaneId && dropTargetSwimlaneId === swimlaneId && (
                 <div
                   className="h-16 bg-white border-2 border-black border-dashed rounded-lg my-2" 
-                  onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDropTargetSwimlaneId(swimlaneId); }}
+                  onDragOver={(e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); // Stop propagation for placeholder
+                    e.dataTransfer.dropEffect = "move"; 
+                    setDropTargetSwimlaneId(swimlaneId); 
+                  }}
                   onDrop={(e) => handleSwimlaneDrop(e, swimlaneId)}
                 />
               )}
@@ -711,7 +715,12 @@ export function KanbanBoard() {
         {draggingSwimlaneId && dropTargetSwimlaneId === "end-of-board" && (
             <div
                 className="h-16 bg-white border-2 border-black border-dashed rounded-lg my-2" 
-                onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDropTargetSwimlaneId("end-of-board"); }}
+                onDragOver={(e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); // Stop propagation for placeholder
+                    e.dataTransfer.dropEffect = "move"; 
+                    setDropTargetSwimlaneId("end-of-board"); 
+                }}
                 onDrop={(e) => handleSwimlaneDrop(e)} 
             />
         )}
@@ -729,3 +738,5 @@ export function KanbanBoard() {
     </div>
   );
 }
+
+    
