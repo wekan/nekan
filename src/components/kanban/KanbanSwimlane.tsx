@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Settings, Trash2, Palette, ArrowDown } from "lucide-react";
+import { Settings, Trash2, Palette, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,15 +29,11 @@ interface KanbanSwimlaneProps {
   onSetSwimlaneColor: (swimlaneId: string, color: string) => void;
   onSetListColor: (listId: string, color: string) => void;
   onSetTaskColor: (taskId: string, color: string) => void;
-
-  // Swimlane D&D
   onSwimlaneDragStart: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void;
   onSwimlaneDrop: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
   onSwimlaneDragEnd: () => void;
   draggingSwimlaneId: string | null;
   dropTargetSwimlaneId: string | null;
-
-  // List D&D
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
   onListDropOnList: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetSwimlaneId: string) => void;
   onListDropOnSwimlaneArea: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
@@ -85,9 +81,6 @@ export function KanbanSwimlane({
 
   const handleDragOverSwimlane = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
-      // Visual feedback for drop target is handled by dropTargetSwimlaneId prop
-    }
   };
 
   const handleDropOnSwimlane = (event: React.DragEvent<HTMLDivElement>) => {
@@ -100,7 +93,6 @@ export function KanbanSwimlane({
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // Visual feedback handled by dropTargetListId for `end-of-swimlane`
   };
 
   const handleDropListOnSwimlaneArea = (event: React.DragEvent<HTMLDivElement>) => {
@@ -123,7 +115,7 @@ export function KanbanSwimlane({
       />
       <div
         className={cn(
-          "flex flex-col p-4 rounded-lg shadow-md border relative", // Added relative for drop indicator positioning
+          "flex flex-col p-4 rounded-lg shadow-md border relative",
           draggingSwimlaneId === swimlane.id ? "opacity-50 ring-2 ring-primary" : "border-border",
           dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id ? "border-dashed border-primary border-2" : ""
         )}
@@ -137,17 +129,14 @@ export function KanbanSwimlane({
           </div>
         )}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div
-              draggable 
-              onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
-              onDragEnd={onSwimlaneDragEnd}
-              className="cursor-grab p-1"
-              aria-label="Drag swimlane"
-              data-no-card-click="true"
-            >
-              <GripVertical className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
-            </div>
+          <div 
+            className="flex items-center gap-2 flex-1 min-w-0 cursor-grab"
+            draggable 
+            onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
+            onDragEnd={onSwimlaneDragEnd}
+            aria-label={`Drag swimlane ${swimlane.name}`}
+            data-no-card-click="true"
+          >
             <h2 className="text-xl font-semibold text-foreground truncate">{swimlane.name}</h2>
           </div>
           <DropdownMenu>
@@ -172,7 +161,7 @@ export function KanbanSwimlane({
 
         <div 
           className={cn(
-            "flex gap-4 overflow-x-auto pb-2 min-h-[150px] relative", // Added relative for drop indicator
+            "flex gap-4 overflow-x-auto pb-2 min-h-[150px] relative",
             dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId ? "border-2 border-dashed border-primary" : ""
             )} 
           onDragOver={handleDragOverListArea}
@@ -197,7 +186,6 @@ export function KanbanSwimlane({
                   onOpenCard={onOpenCard}
                   onSetListColor={onSetListColor}
                   onSetTaskColor={onSetTaskColor}
-                  // List D&D Props
                   onListDragStart={onListDragStart}
                   onListDropOnList={onListDropOnList}
                   onListDragEnd={onListDragEnd}
@@ -206,14 +194,14 @@ export function KanbanSwimlane({
                 />
                 {/* Drop indicator for lists between lists */}
                 {dropTargetListId === list.id && draggingListId && draggingListId !== list.id && (
-                  <div className="w-2 bg-primary/50 rounded mx-1 self-stretch flex items-center justify-center -order-1 relative left-[-12px]"> {/* Ensure it appears before the target list */}
+                  <div className="w-2 bg-primary/50 rounded mx-1 self-stretch flex items-center justify-center -order-1 relative left-[-12px]">
                      <ArrowDown className="h-3 w-3 text-primary-foreground transform -rotate-90"/>
                   </div>
                 )}
               </React.Fragment>
             );
           })}
-           {lists.length === 0 && draggingListId && ( // Show if swimlane is empty and dragging a list
+           {lists.length === 0 && draggingListId && (
             <div className="flex-1 min-w-[200px] border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 p-4">
               Drop list here
             </div>
