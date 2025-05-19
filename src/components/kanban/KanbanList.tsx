@@ -4,7 +4,7 @@
 import type { List as ListType, Task } from "@/lib/types";
 import { TaskCard } from "./TaskCard";
 import { Button } from "@/components/ui/button";
-import { PlusSquare, Menu, Trash2, Palette } from "lucide-react";
+import { Plus, Menu, Trash2, Palette } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
@@ -121,8 +121,8 @@ export function KanbanList({
       >
         <div className="p-3 border-b border-border flex items-center justify-between">
           <div 
-            className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
-            draggable
+            className="flex items-center gap-1 flex-1 min-w-0" 
+            draggable 
             onDragStart={(e) => { 
                 e.stopPropagation();
                 onListDragStart(e, list.id, swimlaneId); 
@@ -222,7 +222,7 @@ export function KanbanList({
         </ScrollArea>
         <div className="p-3 border-t border-border">
           <Button variant="outline" className="w-full" onClick={() => onAddTask(list.id)}>
-            <PlusSquare className="mr-2 h-4 w-4" /> Add Task
+            <Plus className="mr-2 h-4 w-4" /> Add Task
           </Button>
         </div>
       </div>
