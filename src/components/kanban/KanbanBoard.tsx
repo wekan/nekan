@@ -150,6 +150,7 @@ export function KanbanBoard() {
 
   const handleDragStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
     let sourceListId: string | undefined;
+    // Find the source list by iterating through swimlanes and their lists
     for (const swimlane of Object.values(board.swimlanes)) {
         for (const listId of swimlane.listIds) {
             if (board.lists[listId]?.taskIds.includes(taskId)) {
@@ -162,7 +163,7 @@ export function KanbanBoard() {
 
     if (sourceListId) {
       event.dataTransfer.setData("taskId", taskId);
-      event.dataTransfer.setData("sourceListId", sourceListId);
+      event.dataTransfer.setData("sourceListId", sourceListId); // Though we use state, this can be useful
       setDraggingTaskId(taskId);
       setDraggedTaskInfo({taskId, sourceListId: sourceListId});
       event.dataTransfer.effectAllowed = "move";
@@ -174,70 +175,102 @@ export function KanbanBoard() {
     setDraggedTaskInfo(null);
   };
 
-  const handleDropTask = (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => {
+  const handleDropTask = (event: React.DragEvent<HTMLDivElement>, currentTargetListId: string, currentTargetTaskId?: string) => {
     event.preventDefault();
-    if (!draggedTaskInfo) return;
-
-    const {taskId: movedTaskId, sourceListId} = draggedTaskInfo;
-
+    if (!draggedTaskInfo) {
+      console.warn("draggedTaskInfo is null in handleDropTask");
+      return;
+    }
+  
+    const { taskId: movedTaskId, sourceListId: currentSourceListId } = draggedTaskInfo;
+  
     setBoard(prevBoard => {
-      const newBoard = { ...prevBoard };
-      newBoard.lists = { ...prevBoard.lists };
-      
-      const sourceListData = prevBoard.lists[sourceListId];
-      const targetListData = prevBoard.lists[targetListId];
-
-      if (!sourceListData || !targetListData) return prevBoard;
-
-      newBoard.lists[sourceListId] = { ...sourceListData, taskIds: [...sourceListData.taskIds] };
-      newBoard.lists[targetListId] = { ...targetListData, taskIds: [...targetListData.taskIds] };
-      
-      const sourceList = newBoard.lists[sourceListId];
-      const targetList = newBoard.lists[targetListId];
-
-      const taskIndexInSource = sourceList.taskIds.indexOf(movedTaskId);
-      if (taskIndexInSource > -1) {
-        sourceList.taskIds.splice(taskIndexInSource, 1);
+      const newBoardState = { ...prevBoard };
+      const newListsState = { ...newBoardState.lists }; // Shallow copy of the lists map
+  
+      // Get task IDs from the source list
+      const sourceListTaskIdsCopy = [...newListsState[currentSourceListId].taskIds];
+      const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
+  
+      if (taskIndexInSource === -1) {
+        // This should ideally not happen if dragStart was correct
+        console.warn(`Task ${movedTaskId} not found in source list ${currentSourceListId}. Aborting drop.`);
+        return prevBoard;
       }
-
-      let newOrderIndex;
-      if (targetTaskId) {
-        const taskIndexInTarget = targetList.taskIds.indexOf(targetTaskId);
-        if (taskIndexInTarget > -1) {
-            targetList.taskIds.splice(taskIndexInTarget, 0, movedTaskId);
-            newOrderIndex = taskIndexInTarget;
-        } else { 
-            targetList.taskIds.push(movedTaskId);
-            newOrderIndex = targetList.taskIds.length -1;
+  
+      // 1. Remove task from (copied) source task IDs
+      sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
+  
+      let finalTaskIdsForTargetList;
+  
+      if (currentSourceListId === currentTargetListId) {
+        // Moving within the same list
+        // Operate on the array that already had the task removed
+        finalTaskIdsForTargetList = [...sourceListTaskIdsCopy]; 
+  
+        if (currentTargetTaskId) { // Dropping onto an existing task in the same list
+          const insertAtIndex = finalTaskIdsForTargetList.indexOf(currentTargetTaskId);
+          if (insertAtIndex > -1) {
+            finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
+          } else {
+            // If currentTargetTaskId is not found (e.g., it was the movedTaskId itself and now removed, or some other edge case)
+            finalTaskIdsForTargetList.push(movedTaskId); // Append to be safe
+          }
+        } else { // Dropping into an empty area of the same list
+          finalTaskIdsForTargetList.push(movedTaskId);
         }
-      } else { 
-        targetList.taskIds.push(movedTaskId);
-        newOrderIndex = targetList.taskIds.length -1;
+        newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], taskIds: finalTaskIdsForTargetList };
+      } else {
+        // Moving to a different list
+        // First, update the source list with the task removed
+        newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], taskIds: sourceListTaskIdsCopy };
+  
+        // Now, prepare the target list
+        finalTaskIdsForTargetList = [...newListsState[currentTargetListId].taskIds];
+        if (currentTargetTaskId) { // Dropping onto an existing task in the new list
+          const insertAtIndex = finalTaskIdsForTargetList.indexOf(currentTargetTaskId);
+          if (insertAtIndex > -1) {
+            finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
+          } else {
+            finalTaskIdsForTargetList.push(movedTaskId); // Fallback: append if target not found
+          }
+        } else { // Dropping into an empty area of the new list
+          finalTaskIdsForTargetList.push(movedTaskId);
+        }
+        newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], taskIds: finalTaskIdsForTargetList };
       }
-      
-      targetList.taskIds.forEach((tId, index) => {
-        if (newBoard.tasks[tId]) {
-          newBoard.tasks[tId] = { ...newBoard.tasks[tId], order: index };
+  
+      newBoardState.lists = newListsState;
+  
+      // Update task 'order' property for all tasks in affected lists
+      const affectedListIds = new Set([currentSourceListId, currentTargetListId]);
+      const newTasksState = { ...newBoardState.tasks };
+  
+      affectedListIds.forEach(listId => {
+        const list = newBoardState.lists[listId];
+        if (list) {
+          list.taskIds.forEach((tId, index) => {
+            if (newTasksState[tId]) {
+              newTasksState[tId] = { ...newTasksState[tId], order: index };
+            }
+          });
         }
       });
-      if (sourceListId !== targetListId) {
-        sourceList.taskIds.forEach((tId, index) => {
-            if (newBoard.tasks[tId]) {
-                newBoard.tasks[tId] = { ...newBoard.tasks[tId], order: index };
-            }
-        });
-      }
+      newBoardState.tasks = newTasksState;
       
-      return newBoard;
+      return newBoardState;
     });
+  
     setDraggingTaskId(null);
     setDraggedTaskInfo(null);
   };
+  
 
   const handleRankTasks = async () => {
     let todoListId: string | undefined;
     let todoList: ListType | undefined;
 
+    // Find "To Do" list across all swimlanes
     for (const swimlaneId of board.swimlaneOrder) {
         const swimlane = board.swimlanes[swimlaneId];
         for (const listId of swimlane.listIds) {
@@ -254,16 +287,16 @@ export function KanbanBoard() {
       toast({ title: "No Tasks to Rank", description: "Could not find a 'To Do' list with tasks." });
       return;
     }
-    const finalTodoListId = todoListId;
+    const finalTodoListId = todoListId; // Capture for use in closure
 
     setIsRanking(true);
     try {
       const tasksToRank: RankTasksInput["tasks"] = todoList.taskIds
         .map(taskId => board.tasks[taskId])
-        .filter(task => task) 
+        .filter(task => task) // Ensure task exists
         .map(task => ({
           id: task.id,
-          description: task.description || task.title,
+          description: task.description || task.title, // Use title if description is empty
           deadline: task.deadline,
         }));
 
@@ -278,22 +311,31 @@ export function KanbanBoard() {
       setBoard(prevBoard => {
         const newBoard = { ...prevBoard };
         const newLists = { ...newBoard.lists };
-        const targetList = newLists[finalTodoListId];
-        if (!targetList) return prevBoard;
+        const targetList = newLists[finalTodoListId]; // Use captured list ID
+        if (!targetList) return prevBoard; // Should not happen
 
+        // Get current task IDs in the "To Do" list to ensure only existing tasks are reordered
         const currentTodoTaskIds = [...targetList.taskIds];
-        const rankedTaskIds = rankedResults
-          .sort((a, b) => a.rank - b.rank)
-          .map(r => r.id);
         
-        const newOrderedTaskIds = rankedTaskIds.filter(id => currentTodoTaskIds.includes(id));
-        const unrankedTasks = currentTodoTaskIds.filter(id => !newOrderedTaskIds.includes(id));
-        
-        const finalListTaskIds = [...newOrderedTaskIds, ...unrankedTasks];
-        newLists[finalTodoListId] = { ...targetList, taskIds: finalListTaskIds };
+        // Create a map of rank per task ID for easier lookup
+        const rankMap = new Map(rankedResults.map(r => [r.id, r.rank]));
 
+        // Sort existing task IDs based on AI rank, unranked tasks go to the bottom
+        const newOrderedTaskIds = [...currentTodoTaskIds].sort((aId, bId) => {
+            const rankA = rankMap.get(aId);
+            const rankB = rankMap.get(bId);
+
+            if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
+            if (rankA !== undefined) return -1; // a is ranked, b is not -> a comes first
+            if (rankB !== undefined) return 1;  // b is ranked, a is not -> b comes first
+            return 0; // neither is ranked by AI, keep original relative order (or could use task.order)
+        });
+        
+        newLists[finalTodoListId] = { ...targetList, taskIds: newOrderedTaskIds };
+
+        // Update order property for tasks in the sorted list
         const newTasks = { ...newBoard.tasks };
-        finalListTaskIds.forEach((taskId, index) => {
+        newOrderedTaskIds.forEach((taskId, index) => {
           if (newTasks[taskId]) {
             newTasks[taskId] = { ...newTasks[taskId], order: index };
           }
@@ -372,8 +414,9 @@ export function KanbanBoard() {
           
           const listsInSwimlane = swimlane.listIds
             .map(listId => board.lists[listId])
-            .filter(Boolean) as ListType[];
+            .filter(Boolean) as ListType[]; // Ensure list exists
           
+          // Sort lists based on their order property, if available
           listsInSwimlane.sort((a, b) => a.order - b.order);
 
           return (
