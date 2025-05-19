@@ -3,9 +3,9 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import type { Task } from "@/lib/types";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card as ShadCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card"; // Renamed to avoid conflict with component
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Menu, Trash2, Palette } from "lucide-react"; // Changed Settings to Menu
+import { CalendarDays, Menu, Trash2, Palette } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,17 +32,13 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
   useEffect(() => {
     if (task.deadline) {
       try {
-        // Ensure the deadline is treated as local time, not UTC, if only date is provided
         const date = new Date(task.deadline + "T00:00:00");
         if (!isNaN(date.valueOf())) {
-            // Format to a more readable date string, e.g., "August 20, 2024"
-            // This formatting will be client-side only to avoid hydration issues with toLocaleDateString initially
             setDisplayDeadline(date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
         } else {
-            setDisplayDeadline(task.deadline); // Fallback if parsing fails
+            setDisplayDeadline(task.deadline); 
         }
       } catch (e) {
-        // Fallback in case of error
         setDisplayDeadline(task.deadline);
       }
     } else {
@@ -62,6 +58,8 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
   const cardStyle = task.color ? { backgroundColor: task.color } : {};
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Allow click if the target is not the menu button or its children,
+    // and not the draggable title itself when a drag is not active.
     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
       return;
     }
@@ -75,6 +73,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
     if (!isDragging) {
       onOpenCard(task.id);
     }
+    // If it is a drag action, onDragStart will handle it, and we don't want to open.
   };
 
 
@@ -88,24 +87,25 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
         onChange={handleColorInputChange}
         data-no-card-click="true"
       />
-      <Card
+      <ShadCard // Using aliased ShadCN Card
         style={cardStyle}
         className={cn(
           "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow group/taskcard",
           isDragging ? "opacity-50 ring-2 ring-primary scale-105" : "",
-          "bg-card"
+          "bg-card" // Ensuring ShadCN Card's bg-card is used unless overridden by task.color
         )}
-        // Main card click removed to be more specific
+        // onClick={handleCardClick} // Moved click handling to be more specific
       >
         <CardHeader className="p-0 mb-2 flex flex-row items-center justify-between gap-2">
           {/* Card Title - Draggable */}
           <div
             draggable
             onDragStart={(e) => {
+              // e.stopPropagation(); // Allow drag from title
               onDragStart(e, task.id);
             }}
             onDragEnd={onDragEnd}
-            onClick={handleTitleClick}
+            onClick={handleTitleClick} // This will now handle opening the card
             className="flex-1 min-w-0 cursor-grab group-hover/taskcard:opacity-100 transition-opacity"
             aria-label={`Drag task ${task.title}`}
           >
@@ -119,7 +119,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-7 w-7 opacity-70 group-hover/taskcard:opacity-100 transition-opacity">
-                  <Menu className="h-4 w-4" /> {/* Changed from Settings */}
+                  <Menu className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -151,7 +151,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
             <span>{displayDeadline}</span>
           </div>
         )}
-      </Card>
+      </ShadCard>
     </>
   );
 }

@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { Swimlane, List as ListType, Task } from "@/lib/types";
-import { KanbanList } from "./KanbanList";
+import type { Swimlane as SwimlaneType, List as ListType, Task } from "@/lib/types";
+import { KanbanList } from "./KanbanList"; // Changed from List to KanbanList
 import { Button } from "@/components/ui/button";
 import { Menu, Trash2, Palette, PlusCircle } from "lucide-react";
 import {
@@ -22,8 +22,8 @@ import React, { useRef, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 
-interface KanbanSwimlaneProps {
-  swimlane: Swimlane;
+interface KanbanSwimlaneProps { // Renamed from SwimlaneProps
+  swimlane: SwimlaneType;
   lists: ListType[];
   tasks: Record<string, Task>;
   onOpenCreateTaskForm: (listId: string) => void;
@@ -60,9 +60,9 @@ interface KanbanSwimlaneProps {
   onSwimlaneAreaDragOverForList: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
 }
 
-export function KanbanSwimlane({
+export function KanbanSwimlane({ // Renamed from Swimlane
   swimlane,
-  lists, // This is the full list from props
+  lists,
   tasks,
   onOpenCreateTaskForm,
   
@@ -134,8 +134,16 @@ export function KanbanSwimlane({
 
   const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
   
-  // Filter out the list that is currently being dragged
-  const listsToRender = isAnySwimlaneBeingDragged ? [] : lists.filter(l => l.id !== draggingListId);
+  const listsToRender = lists.filter(l => l.id !== draggingListId);
+
+
+  const swimlaneContentDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
+      onSwimlaneDragOver(e, swimlane.id);
+   } else {
+       e.preventDefault(); // Important to allow dropping lists onto the swimlane area
+   }
+  };
 
   return (
     <>
@@ -151,20 +159,14 @@ export function KanbanSwimlane({
         className={cn(
           "flex flex-col p-4 rounded-lg shadow-md border transition-all duration-300 ease-in-out",
           isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : "border-border",
+          // isDropTargetForSwimlane ? "ring-2 ring-primary ring-offset-2" : "" // This was for inter-swimlane drop
         )}
         style={swimlaneStyle}
-        onDragOver={(e) => {
-            // This onDragOver is for swimlane-on-swimlane drop indication, handled by KanbanBoard's placeholders
-            // but we still need to call props.onSwimlaneDragOver to inform KanbanBoard
-            if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
-                 onSwimlaneDragOver(e, swimlane.id);
-            } else {
-                e.preventDefault(); 
-            }
-        }}
+        onDragOver={swimlaneContentDragOver} // This is for swimlane-on-swimlane
+        // onDrop is handled by placeholders in KanbanBoard for swimlane-on-swimlane
       >
         <div className="flex items-center justify-between mb-4"> 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0"> {/* Container for left-aligned controls */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -198,37 +200,44 @@ export function KanbanSwimlane({
             </DropdownMenu>
           </div>
           
+          {/* Draggable Title Area - takes up remaining space and centers title */}
           <div 
             draggable={true} 
             onDragStart={(e) => { 
-              const draggedElement = e.currentTarget as HTMLElement;
               // Use the title itself for a cleaner drag image if possible, or the whole header div
-              const titleElement = draggedElement.querySelector('h2');
-              const elementToDrag = titleElement || draggedElement;
+              const titleElement = (e.currentTarget as HTMLElement).querySelector('h2');
+              const elementToDrag = titleElement || e.currentTarget;
               const rect = elementToDrag.getBoundingClientRect();
               const xOffset = e.clientX - rect.left;
               const yOffset = e.clientY - rect.top; 
-              e.dataTransfer.setDragImage(elementToDrag, xOffset, yOffset);
+              try { // setDragImage can fail in some environments if not careful
+                  e.dataTransfer.setDragImage(elementToDrag, xOffset, yOffset);
+              } catch (err) {
+                  // console.warn("setDragImage failed:", err);
+              }
               onSwimlaneDragStart(e, swimlane.id); 
             }}
             onDragEnd={onSwimlaneDragEnd}
             aria-label={`Drag swimlane ${swimlane.name}`}
             data-no-card-click="true"
-            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
+            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab" // Changed to flex-1 to allow title to take space
           >
-            <h2 className="text-xl font-semibold text-foreground truncate">
+            {/* <GripVertical className="h-5 w-5 text-muted-foreground" /> */}
+            <h2 className="text-xl font-semibold text-foreground truncate"> {/* Title is now left-aligned within this flex item */}
                 {swimlane.name}
             </h2>
           </div>
+          {/* Removed spacer div as title is now left-aligned within its flex container */}
         </div>
 
+        {/* Container for lists */}
         <div 
           className={cn(
             "flex gap-2 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
             isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100"
           )}
-          onDragOver={handleDragOverListArea}
-          onDrop={handleDropListOnSwimlaneArea}
+          onDragOver={handleDragOverListArea} // For dropping lists onto the swimlane area
+          onDrop={handleDropListOnSwimlaneArea}   // For dropping lists onto the swimlane area
         >
           {!isAnySwimlaneBeingDragged && listsToRender.map((list) => { // Use listsToRender
             const tasksInList = list.taskIds
@@ -236,6 +245,7 @@ export function KanbanSwimlane({
               .filter(Boolean)
               .sort((a,b) => a.order - b.order) as Task[];
             
+            // Placeholder for dropping a list *before* this list
             const showListDropPlaceholderBeforeThis = draggingListId && 
                                                       dropTargetListId === list.id && 
                                                       draggingListId !== list.id;
@@ -246,22 +256,23 @@ export function KanbanSwimlane({
                     className={listPlaceholderStyle}
                     onDragOver={(e) => { 
                         e.preventDefault(); 
-                        e.stopPropagation(); 
+                        e.stopPropagation(); // Important: stop propagation
                         e.dataTransfer.dropEffect = "move";
+                        // Ensure onListDragOver is called to keep dropTargetListId updated
                         if (draggingListId) {
-                           onListDragOver(e, list.id); 
+                           onListDragOver(e, list.id); // list.id is the target list *after* this placeholder
                         }
                     }}
                     onDrop={(e) => { 
                         e.preventDefault();
-                        e.stopPropagation();
+                        e.stopPropagation(); // Important: stop propagation
                         if (draggingListId) {
-                            onListDropOnList(e, list.id, swimlane.id); 
+                            onListDropOnList(e, list.id, swimlane.id); // list.id is the target list *after* this placeholder
                         }
                     }}
                   />
                 )}
-                <KanbanList
+                <KanbanList // Changed from List to KanbanList
                   swimlaneId={swimlane.id}
                   list={list}
                   tasks={tasksInList}
@@ -279,30 +290,32 @@ export function KanbanSwimlane({
                   onSetTaskColor={onSetTaskColor}
 
                   onListDragStart={onListDragStart}
-                  onListDropOnList={onListDropOnList}
+                  onListDropOnList={onListDropOnList} // This is for dropping list ON another list (handled by placeholder now)
                   onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
                   dropTargetListId={dropTargetListId} 
-                  onListDragOver={onListDragOver} 
+                  onListDragOver={onListDragOver} // Pass this down so KanbanList can call it
                 />
               </React.Fragment>
             );
           })}
+          {/* Placeholder for dropping a list at the end of the swimlane */}
           {!isAnySwimlaneBeingDragged && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
             <div 
                 className={listPlaceholderStyle}
                 onDragOver={(e) => {
                     e.preventDefault(); 
-                    e.stopPropagation(); 
+                    e.stopPropagation(); // Important: stop propagation
                     if (draggingListId) {
+                        // Call the swimlane area drag over to keep the target ID set correctly
                         onSwimlaneAreaDragOverForList(e, swimlane.id);
                     }
                     e.dataTransfer.dropEffect = "move";
                 }}
                 onDrop={(e) => { 
                     e.preventDefault();
-                    e.stopPropagation();
+                    e.stopPropagation(); // Important: stop propagation
                     if (draggingListId) {
                         onListDropOnSwimlaneArea(e, swimlane.id);
                     }
