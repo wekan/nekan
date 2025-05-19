@@ -47,7 +47,7 @@ interface KanbanSwimlaneProps {
 
   onSwimlaneDragStart: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void;
   onSwimlaneDragEnd: () => void;
-  onSwimlaneDragOver?: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void; 
+  onSwimlaneDragOver: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void; 
   draggingSwimlaneId: string | null; 
   
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
@@ -62,7 +62,7 @@ interface KanbanSwimlaneProps {
 
 export function KanbanSwimlane({
   swimlane,
-  lists,
+  lists, // This is the full list from props
   tasks,
   onOpenCreateTaskForm,
   
@@ -133,6 +133,9 @@ export function KanbanSwimlane({
   };
 
   const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
+  
+  // Filter out the list that is currently being dragged
+  const listsToRender = isAnySwimlaneBeingDragged ? [] : lists.filter(l => l.id !== draggingListId);
 
   return (
     <>
@@ -151,6 +154,8 @@ export function KanbanSwimlane({
         )}
         style={swimlaneStyle}
         onDragOver={(e) => {
+            // This onDragOver is for swimlane-on-swimlane drop indication, handled by KanbanBoard's placeholders
+            // but we still need to call props.onSwimlaneDragOver to inform KanbanBoard
             if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
                  onSwimlaneDragOver(e, swimlane.id);
             } else {
@@ -197,10 +202,13 @@ export function KanbanSwimlane({
             draggable={true} 
             onDragStart={(e) => { 
               const draggedElement = e.currentTarget as HTMLElement;
-              const rect = draggedElement.getBoundingClientRect();
+              // Use the title itself for a cleaner drag image if possible, or the whole header div
+              const titleElement = draggedElement.querySelector('h2');
+              const elementToDrag = titleElement || draggedElement;
+              const rect = elementToDrag.getBoundingClientRect();
               const xOffset = e.clientX - rect.left;
               const yOffset = e.clientY - rect.top; 
-              e.dataTransfer.setDragImage(draggedElement, xOffset, yOffset);
+              e.dataTransfer.setDragImage(elementToDrag, xOffset, yOffset);
               onSwimlaneDragStart(e, swimlane.id); 
             }}
             onDragEnd={onSwimlaneDragEnd}
@@ -222,7 +230,7 @@ export function KanbanSwimlane({
           onDragOver={handleDragOverListArea}
           onDrop={handleDropListOnSwimlaneArea}
         >
-          {!isAnySwimlaneBeingDragged && lists.map((list) => {
+          {!isAnySwimlaneBeingDragged && listsToRender.map((list) => { // Use listsToRender
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
@@ -240,18 +248,15 @@ export function KanbanSwimlane({
                         e.preventDefault(); 
                         e.stopPropagation(); 
                         e.dataTransfer.dropEffect = "move";
-                        // When dragging over this specific placeholder, ensure dropTargetListId remains set to the list
-                        // that this placeholder is "for" (i.e., the list that comes after it).
-                        // This helps in keeping the placeholder active and correctly targeted.
                         if (draggingListId) {
-                           onListDragOver(e, list.id); // list.id is the ID of the list *after* this placeholder
+                           onListDragOver(e, list.id); 
                         }
                     }}
                     onDrop={(e) => { 
                         e.preventDefault();
                         e.stopPropagation();
                         if (draggingListId) {
-                            onListDropOnList(e, list.id, swimlane.id); // list.id is the ID of the list *after* this placeholder
+                            onListDropOnList(e, list.id, swimlane.id); 
                         }
                     }}
                   />
@@ -278,8 +283,8 @@ export function KanbanSwimlane({
                   onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
-                  dropTargetListId={dropTargetListId} // Pass dropTargetListId to KanbanList
-                  onListDragOver={onListDragOver} // Pass onListDragOver to KanbanList
+                  dropTargetListId={dropTargetListId} 
+                  onListDragOver={onListDragOver} 
                 />
               </React.Fragment>
             );
@@ -315,4 +320,3 @@ export function KanbanSwimlane({
     </>
   );
 }
-
