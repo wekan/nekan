@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, PlusCircle, ArrowDown } from "lucide-react";
+import { Menu, Trash2, Palette, PlusCircle } from "lucide-react"; // Removed ArrowDown
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +33,7 @@ interface KanbanSwimlaneProps {
   onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
   draggingTaskId: string | null;
   dropIndicator: { listId: string; beforeTaskId: string | null } | null; 
-  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string) => void; 
+  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string | null) => void; 
 
 
   onDeleteSwimlane: (swimlaneId: string) => void;
@@ -132,6 +132,8 @@ export function KanbanSwimlane({
     onAddSwimlaneFromTemplate(swimlane.id);
   };
 
+  const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1";
+
   return (
     <>
       <input
@@ -192,7 +194,6 @@ export function KanbanSwimlane({
           </div>
           
           <div 
-            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
             draggable={true} 
             onDragStart={(e) => { 
               const draggedElement = e.currentTarget as HTMLElement;
@@ -205,6 +206,7 @@ export function KanbanSwimlane({
             onDragEnd={onSwimlaneDragEnd}
             aria-label={`Drag swimlane ${swimlane.name}`}
             data-no-card-click="true"
+            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
           >
             <h2 className="text-xl font-semibold text-foreground truncate">
                 {swimlane.name}
@@ -214,31 +216,29 @@ export function KanbanSwimlane({
 
         <div 
           className={cn(
-            "flex gap-4 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
+            "flex gap-2 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out", // Reduced gap for tighter placeholder fit
             isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100"
           )}
           onDragOver={handleDragOverListArea}
           onDrop={handleDropListOnSwimlaneArea}
         >
-          {!isAnySwimlaneBeingDragged && lists.map((list, listIndex) => {
+          {!isAnySwimlaneBeingDragged && lists.map((list) => {
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
               .sort((a,b) => a.order - b.order) as Task[];
             
-            const showListDropPlaceholder = draggingListId && 
-                                           dropTargetListId === list.id && 
-                                           draggingListId !== list.id;
+            const showListDropPlaceholderBeforeThis = draggingListId && 
+                                                      dropTargetListId === list.id && 
+                                                      draggingListId !== list.id;
             return (
               <React.Fragment key={list.id}>
-                {showListDropPlaceholder && (
+                {showListDropPlaceholderBeforeThis && (
                   <div 
-                    className="w-2 h-auto bg-primary/30 rounded-full mx-1 self-stretch flex items-center justify-center opacity-75"
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onListDragOver(e, list.id); e.dataTransfer.dropEffect = "move";}}
-                    onDrop={(e) => onListDropOnList(e, list.id, swimlane.id)}
-                  >
-                    <ArrowDown className="h-4 w-4 text-primary-foreground transform -rotate-90"/>
-                  </div>
+                    className={listPlaceholderStyle}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (draggingListId) onListDragOver(e, list.id); e.dataTransfer.dropEffect = "move";}}
+                    onDrop={(e) => { if (draggingListId) onListDropOnList(e, list.id, swimlane.id);}}
+                  />
                 )}
                 <KanbanList
                   swimlaneId={swimlane.id}
@@ -262,7 +262,7 @@ export function KanbanSwimlane({
                   onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
-                  dropTargetListId={dropTargetListId} // Pass this to KanbanList
+                  dropTargetListId={dropTargetListId}
                   onListDragOver={onListDragOver}
                 />
               </React.Fragment>
@@ -270,12 +270,10 @@ export function KanbanSwimlane({
           })}
           {!isAnySwimlaneBeingDragged && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
             <div 
-                className="flex-shrink-0 w-64 h-auto p-4 border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 bg-background/30"
-                onDragOver={(e) => {e.preventDefault(); e.stopPropagation(); onSwimlaneAreaDragOverForList(e, swimlane.id); e.dataTransfer.dropEffect = "move";}}
-                onDrop={(e) => onListDropOnSwimlaneArea(e, swimlane.id)}
-            >
-              Drop list here
-            </div>
+                className={listPlaceholderStyle}
+                onDragOver={(e) => {e.preventDefault(); e.stopPropagation(); if (draggingListId) onSwimlaneAreaDragOverForList(e, swimlane.id); e.dataTransfer.dropEffect = "move";}}
+                onDrop={(e) => { if (draggingListId) onListDropOnSwimlaneArea(e, swimlane.id);}}
+            />
            )}
         </div>
       </div>
