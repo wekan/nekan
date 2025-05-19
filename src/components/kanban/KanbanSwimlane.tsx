@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Settings, Trash2, Palette, PlusSquare, ArrowDown, ArrowUp } from "lucide-react";
+import { GripVertical, Settings, Trash2, Palette, ArrowDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,7 +35,7 @@ interface KanbanSwimlaneProps {
   onSwimlaneDrop: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
   onSwimlaneDragEnd: () => void;
   draggingSwimlaneId: string | null;
-  dropTargetSwimlaneId: string | null; // For visual indication
+  dropTargetSwimlaneId: string | null;
 
   // List D&D
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
@@ -43,7 +43,7 @@ interface KanbanSwimlaneProps {
   onListDropOnSwimlaneArea: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
   onListDragEnd: () => void;
   draggingListId: string | null;
-  dropTargetListId: string | null; // For visual indication
+  dropTargetListId: string | null;
 }
 
 export function KanbanSwimlane({
@@ -83,33 +83,33 @@ export function KanbanSwimlane({
     colorInputRef.current?.click();
   };
 
-  const handleDragOverSwimlane = (event: React.DragEvent<HTMLDivElement>, currentSwimlaneId: string) => {
+  const handleDragOverSwimlane = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (draggingSwimlaneId && draggingSwimlaneId !== currentSwimlaneId) {
-        // Logic to indicate drop target (already handled by dropTargetSwimlaneId state in parent)
+    if (draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
+      // Visual feedback for drop target is handled by dropTargetSwimlaneId prop
     }
   };
 
-  const handleDropOnSwimlane = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
+  const handleDropOnSwimlane = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    if (draggingSwimlaneId) { // Only handle swimlane drops here
-        onSwimlaneDrop(event, targetSwimlaneId);
+    event.stopPropagation();
+    if (draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
+        onSwimlaneDrop(event, swimlane.id);
     }
   };
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    // Potentially set state to indicate this swimlane is a drop target for a list
+    // Visual feedback handled by dropTargetListId for `end-of-swimlane`
   };
 
   const handleDropListOnSwimlaneArea = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation(); // Prevent swimlane's onDrop from firing for list drops
-    if (draggingListId) { // Ensure a list is being dragged
+    event.stopPropagation(); 
+    if (draggingListId) { 
       onListDropOnSwimlaneArea(event, swimlane.id);
     }
   };
-
 
   return (
     <>
@@ -123,23 +123,23 @@ export function KanbanSwimlane({
       />
       <div
         className={cn(
-          "flex flex-col p-4 rounded-lg shadow-md border",
+          "flex flex-col p-4 rounded-lg shadow-md border relative", // Added relative for drop indicator positioning
           draggingSwimlaneId === swimlane.id ? "opacity-50 ring-2 ring-primary" : "border-border",
           dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id ? "border-dashed border-primary border-2" : ""
         )}
         style={swimlaneStyle}
-        onDragOver={(e) => handleDragOverSwimlane(e, swimlane.id)}
-        onDrop={(e) => handleDropOnSwimlane(e, swimlane.id)}
+        onDragOver={handleDragOverSwimlane}
+        onDrop={handleDropOnSwimlane}
       >
          {dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id && (
-          <div className="h-2 bg-primary/50 rounded my-1 flex items-center justify-center">
+          <div className="absolute top-0 left-0 right-0 h-2 bg-primary/50 rounded-t flex items-center justify-center z-10">
             <ArrowDown className="h-3 w-3 text-primary-foreground"/>
           </div>
         )}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
             <div
-              draggable // Swimlane drag handle
+              draggable 
               onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
               onDragEnd={onSwimlaneDragEnd}
               className="cursor-grab p-1"
@@ -148,11 +148,11 @@ export function KanbanSwimlane({
             >
               <GripVertical className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground">{swimlane.name}</h2>
+            <h2 className="text-xl font-semibold text-foreground truncate">{swimlane.name}</h2>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" data-no-card-click="true">
+              <Button variant="ghost" size="icon" data-no-card-click="true" className="shrink-0">
                 <Settings className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -171,11 +171,14 @@ export function KanbanSwimlane({
         </div>
 
         <div 
-          className="flex gap-4 overflow-x-auto pb-2 min-h-[150px]" // min-h for drop area
+          className={cn(
+            "flex gap-4 overflow-x-auto pb-2 min-h-[150px] relative", // Added relative for drop indicator
+            dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId ? "border-2 border-dashed border-primary" : ""
+            )} 
           onDragOver={handleDragOverListArea}
           onDrop={handleDropListOnSwimlaneArea}
         >
-          {lists.map((list, index) => {
+          {lists.map((list) => {
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
@@ -188,36 +191,30 @@ export function KanbanSwimlane({
                   tasks={tasksInList}
                   onAddTask={onOpenCreateTaskForm}
                   onDropTask={onDropTask}
-                  onDragTaskStart={onDragTaskStart} // This is for tasks, passed through
-                  onDragTaskEnd={onDragTaskEnd} // This is for tasks, passed through
+                  onDragTaskStart={onDragTaskStart} 
+                  onDragTaskEnd={onDragTaskEnd} 
                   draggingTaskId={draggingTaskId}
                   onOpenCard={onOpenCard}
                   onSetListColor={onSetListColor}
                   onSetTaskColor={onSetTaskColor}
-                  // List D&D Props - Crucial for fixing the error
+                  // List D&D Props
                   onListDragStart={onListDragStart}
                   onListDropOnList={onListDropOnList}
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
                   dropTargetListId={dropTargetListId}
                 />
-                 {/* Drop indicator for lists between lists */}
-                {dropTargetListId === `between-${list.id}` && draggingListId && (
-                  <div className="w-2 bg-primary/50 rounded mx-1 self-stretch flex items-center justify-center">
+                {/* Drop indicator for lists between lists */}
+                {dropTargetListId === list.id && draggingListId && draggingListId !== list.id && (
+                  <div className="w-2 bg-primary/50 rounded mx-1 self-stretch flex items-center justify-center -order-1 relative left-[-12px]"> {/* Ensure it appears before the target list */}
                      <ArrowDown className="h-3 w-3 text-primary-foreground transform -rotate-90"/>
                   </div>
                 )}
               </React.Fragment>
             );
           })}
-           {/* Drop indicator for adding to end of lists in swimlane */}
-           {dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId && lists.length > 0 && (
-             <div className="w-2 bg-primary/50 rounded mx-1 self-stretch flex items-center justify-center">
-               <ArrowDown className="h-3 w-3 text-primary-foreground transform -rotate-90"/>
-             </div>
-           )}
-           {lists.length === 0 && draggingListId && (
-            <div className="flex-1 min-w-[200px] border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70">
+           {lists.length === 0 && draggingListId && ( // Show if swimlane is empty and dragging a list
+            <div className="flex-1 min-w-[200px] border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 p-4">
               Drop list here
             </div>
            )}
