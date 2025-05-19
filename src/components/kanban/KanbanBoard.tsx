@@ -253,19 +253,28 @@ export function KanbanBoard() {
       const newTasksState = { ...newBoardState.tasks };
   
       let sourceListTaskIdsCopy = [...newListsState[currentSourceListId].taskIds];
-      const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
-      if (taskIndexInSource > -1) {
-        sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
-      }
-  
-      let finalTaskIdsForTargetList;
+      
+      // If moving within the same list, make a single modifiable copy
       if (currentSourceListId === currentTargetListId) {
-        finalTaskIdsForTargetList = [...sourceListTaskIdsCopy]; 
+        const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
+        if (taskIndexInSource > -1) {
+          sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
+        }
       } else {
+        // If moving to a different list, update source list
+        const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
+        if (taskIndexInSource > -1) {
+          sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
+        }
         newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], taskIds: sourceListTaskIdsCopy };
-        finalTaskIdsForTargetList = newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].taskIds] : [];
       }
       
+      // Prepare target list (either the modified source, or a copy of a different target)
+      let finalTaskIdsForTargetList = (currentSourceListId === currentTargetListId)
+        ? sourceListTaskIdsCopy // Already modified if same list
+        : (newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].taskIds] : []);
+
+      // Remove task if it somehow exists in target (e.g., from a rapid, complex drag) - defensive
       const taskIndexInTargetPreInsert = finalTaskIdsForTargetList.indexOf(movedTaskId);
       if (taskIndexInTargetPreInsert > -1) {
          finalTaskIdsForTargetList.splice(taskIndexInTargetPreInsert, 1);
@@ -297,7 +306,7 @@ export function KanbanBoard() {
     setDropIndicator(null); 
   };
 
-  const handleTaskDragOverList = (event: React.DragEvent, targetListId: string, targetTaskId?: string) => {
+  const handleTaskDragOverList = (event: React.DragEvent, targetListId: string, targetTaskId?: string | null) => {
     event.preventDefault();
     event.stopPropagation();
     if (draggingTaskId) {
@@ -327,7 +336,9 @@ export function KanbanBoard() {
     if (draggingSwimlaneId) { 
         setDropTargetSwimlaneId("end-of-board");
     } else if (draggingListId) {
-        setDropTargetListId(null);
+        // This case might be too broad, specific swimlane area drag over is better.
+        // Consider if this needs to set dropTargetListId to null or specific end-of-board for lists.
+        // For now, let swimlane area drag over handle list targets.
     }
     event.dataTransfer.dropEffect = "move";
   };
@@ -391,10 +402,11 @@ export function KanbanBoard() {
 
   const handleListDragOver = (event: React.DragEvent<HTMLDivElement>, targetListId: string) => {
     event.preventDefault(); 
-    event.stopPropagation();
+    event.stopPropagation(); // Important to stop propagation here
     if (draggingListId && draggingListId !== targetListId) {
       setDropTargetListId(targetListId); 
     } else if (draggingListId && draggingListId === targetListId) {
+      // Hovering over itself, clear specific target to allow "end-of-swimlane" if mouse moves there
       setDropTargetListId(null); 
     }
     event.dataTransfer.dropEffect = "move";
@@ -404,12 +416,8 @@ export function KanbanBoard() {
     event.preventDefault(); 
     event.stopPropagation();
     if (draggingListId) {
-        const targetSwimlane = board.swimlanes[targetSwimlaneId];
-        if (targetSwimlane) { 
-            if (!dropTargetListId || !targetSwimlane.listIds.includes(dropTargetListId)) {
-                 setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
-            }
-        }
+      // Set target to end of the specific swimlane
+      setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
     }
     event.dataTransfer.dropEffect = "move";
   };
@@ -423,13 +431,14 @@ export function KanbanBoard() {
 
     if (!movedListId || !sourceSwimlaneId || movedListId === targetListId) {
       setDropTargetListId(null);
+      // Do not reset draggingListId here, let onListDragEnd handle it
       return;
     }
 
     setBoard(prevBoard => {
       const newBoard = { ...prevBoard };
       const newSwimlanes = { ...newBoard.swimlanes };
-      const newLists = { ...newBoard.lists };
+      const newListsData = { ...newBoard.lists }; // Changed variable name for clarity
 
       if (!newSwimlanes[sourceSwimlaneId] || !newSwimlanes[targetSwimlaneId]) return prevBoard;
 
@@ -439,19 +448,36 @@ export function KanbanBoard() {
       const indexInSource = sourceListIdsCopy.indexOf(movedListId);
       if (indexInSource > -1) {
         sourceListIdsCopy.splice(indexInSource, 1);
+      } else {
+        // If movedListId is not in sourceListIdsCopy, it might mean it was already moved in a rapid sequence.
+        // This could happen with very fast drags or if state updates are batched unusually.
+        // For robustness, one might log this or decide if the operation should proceed or be considered invalid.
+        // For now, proceed assuming it's a valid move intent if other conditions are met.
       }
 
+
       if (sourceSwimlaneId === targetSwimlaneId) {
-        targetListIdsEffectiveCopy = sourceListIdsCopy; // Work on the already modified array
+        // If moving within the same swimlane, targetListIdsEffectiveCopy is based on the already modified sourceListIdsCopy
+        targetListIdsEffectiveCopy = [...sourceListIdsCopy]; // Ensure it's a new copy for modification
       } else {
+        // If moving to a different swimlane, targetListIdsEffectiveCopy is a copy of the target swimlane's lists
         targetListIdsEffectiveCopy = [...newSwimlanes[targetSwimlaneId].listIds];
       }
       
-      const targetIndex = targetListIdsEffectiveCopy.indexOf(targetListId); // targetListId is list to insert BEFORE
+      // Defensive: Ensure movedListId is not already in targetListIdsEffectiveCopy before insertion
+      // This can happen if a list is dragged back and forth quickly.
+      const existingIndexInTarget = targetListIdsEffectiveCopy.indexOf(movedListId);
+      if (existingIndexInTarget > -1) {
+          targetListIdsEffectiveCopy.splice(existingIndexInTarget, 1);
+      }
+      
+      const targetIndex = targetListIdsEffectiveCopy.indexOf(targetListId); 
       if (targetIndex !== -1) {
         targetListIdsEffectiveCopy.splice(targetIndex, 0, movedListId);
       } else {
-        targetListIdsEffectiveCopy.push(movedListId); // Fallback if targetListId not found in current list
+        // Fallback if targetListId not found (e.g., if it was the one being dragged and already removed)
+        // This should be rare if using placeholders correctly.
+        targetListIdsEffectiveCopy.push(movedListId); 
       }
 
       newSwimlanes[sourceSwimlaneId] = {
@@ -470,16 +496,18 @@ export function KanbanBoard() {
         const swimlane = newSwimlanes[sId];
         if (swimlane && swimlane.listIds) {
           swimlane.listIds.forEach((lId, index) => {
-            if (newLists[lId]) {
-              newLists[lId] = { ...newLists[lId], order: index };
+            if (newListsData[lId]) {
+              newListsData[lId] = { ...newListsData[lId], order: index };
             }
           });
         }
       });
 
-      return { ...newBoard, swimlanes: newSwimlanes, lists: newLists };
+      return { ...newBoard, swimlanes: newSwimlanes, lists: newListsData };
     });
     setDropTargetListId(null);
+    setDraggingListId(null); // Explicitly clear after successful drop
+    setDraggedListInfo(null); // Explicitly clear
   };
 
   const handleListDropOnSwimlaneArea = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
@@ -492,7 +520,7 @@ export function KanbanBoard() {
         setDropTargetListId(null);
         return;
     }
-    
+        
     if (sourceSwimlaneId === targetSwimlaneId && 
         board.swimlanes[sourceSwimlaneId].listIds.length <=1 && 
         board.swimlanes[sourceSwimlaneId].listIds[0] === movedListId) {
@@ -503,7 +531,7 @@ export function KanbanBoard() {
     setBoard(prevBoard => {
       const newBoard = { ...prevBoard };
       const newSwimlanes = { ...newBoard.swimlanes };
-      const newLists = { ...newBoard.lists };
+      const newListsData = { ...newBoard.lists }; // Changed variable name
 
       if (!newSwimlanes[sourceSwimlaneId] || !newSwimlanes[targetSwimlaneId]) return prevBoard;
 
@@ -516,14 +544,17 @@ export function KanbanBoard() {
       }
 
       if (sourceSwimlaneId === targetSwimlaneId) {
-        targetListIdsEffectiveCopy = sourceListIdsCopy; // Work on the already modified array
+        targetListIdsEffectiveCopy = [...sourceListIdsCopy]; // New copy for modification
       } else {
         targetListIdsEffectiveCopy = [...newSwimlanes[targetSwimlaneId].listIds];
       }
-
-      if (!targetListIdsEffectiveCopy.includes(movedListId)) { // Ensure not already there
-         targetListIdsEffectiveCopy.push(movedListId); 
+      
+      // Defensive: Ensure movedListId is not already in target before pushing
+      const existingIndexInTarget = targetListIdsEffectiveCopy.indexOf(movedListId);
+      if (existingIndexInTarget > -1) {
+          targetListIdsEffectiveCopy.splice(existingIndexInTarget, 1);
       }
+      targetListIdsEffectiveCopy.push(movedListId); // Add to the end
       
       newSwimlanes[sourceSwimlaneId] = {
         ...newSwimlanes[sourceSwimlaneId],
@@ -541,14 +572,16 @@ export function KanbanBoard() {
          const swimlane = newSwimlanes[sId];
          if (swimlane && swimlane.listIds) { 
             swimlane.listIds.forEach((lId, index) => {
-                if (newLists[lId]) newLists[lId] = { ...newLists[lId], order: index };
+                if (newListsData[lId]) newListsData[lId] = { ...newListsData[lId], order: index };
             });
         }
       });
       
-      return { ...newBoard, swimlanes: newSwimlanes, lists: newLists };
+      return { ...newBoard, swimlanes: newSwimlanes, lists: newListsData };
     });
     setDropTargetListId(null);
+    setDraggingListId(null); // Explicitly clear after successful drop
+    setDraggedListInfo(null); // Explicitly clear
   };
 
   const handleListDragEnd = () => {
@@ -701,8 +734,6 @@ export function KanbanBoard() {
             .map(listId => board.lists[listId])
             .filter(Boolean) as ListType[]; 
           
-          // listsInSwimlane.sort((a, b) => a.order - b.order); // Order is derived from listIds array order
-
           return (
             <React.Fragment key={swimlane.id}>
               {draggingSwimlaneId && draggingSwimlaneId !== swimlaneId && dropTargetSwimlaneId === swimlaneId && (
@@ -783,4 +814,3 @@ export function KanbanBoard() {
   );
 }
 
-    
