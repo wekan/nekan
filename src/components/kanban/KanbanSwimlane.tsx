@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, ArrowDown, PlusCircle } from "lucide-react";
+import { Menu, Trash2, Palette, ArrowDown, PlusCircle, GripVertical } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -172,7 +172,7 @@ export function KanbanSwimlane({
                   <Menu className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start"> {/* Align to start (left) */}
+              <DropdownMenuContent align="start">
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
                   <Palette className="mr-2 h-4 w-4" />
                   Change Color
@@ -187,7 +187,7 @@ export function KanbanSwimlane({
           </div>
           
           <div 
-            className="flex items-center gap-2 flex-1 min-w-0 cursor-grab justify-center px-2" // Added justify-center and padding for title
+            className="flex items-center gap-2 flex-1 min-w-0 cursor-grab px-2"
             draggable 
             onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
             onDragEnd={onSwimlaneDragEnd}
@@ -195,11 +195,6 @@ export function KanbanSwimlane({
             data-no-card-click="true"
           >
             <h2 className="text-xl font-semibold text-foreground truncate">{swimlane.name}</h2>
-          </div>
-           {/* Spacer to balance the left-side buttons, making title appear more centered */}
-          <div className="flex items-center gap-2 shrink-0" style={{ visibility: 'hidden' }}>
-            <Button variant="ghost" size="icon" className="h-7 w-7"><PlusCircle className="h-5 w-5" /></Button>
-            <Button variant="ghost" size="icon" className="h-7 w-7"><Menu className="h-5 w-5" /></Button>
           </div>
         </div>
 
@@ -261,3 +256,6 @@ export function KanbanSwimlane({
     </>
   );
 }
+
+
+    
