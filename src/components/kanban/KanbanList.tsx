@@ -67,6 +67,7 @@ export function KanbanList({
 }: KanbanListProps) {
   const listStyle = list.color ? { backgroundColor: list.color } : {};
   const colorInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSetListColor(list.id, event.target.value);
@@ -76,8 +77,6 @@ export function KanbanList({
     colorInputRef.current?.click();
   };
 
-  // Determine if a placeholder is supposed to be active *before* this list.
-  // This helps the list know when to "step back" and let the placeholder be the target.
   const isPlaceholderActiveBeforeThisList = draggingListId && 
                                             dropTargetListId === list.id && 
                                             draggingListId !== list.id;
@@ -93,23 +92,29 @@ export function KanbanList({
         data-no-card-click="true"
       />
       <div
+        ref={listRef}
         className={cn(
           "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full relative",
-          // Visual indication if this list itself is being dragged
           draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : "" 
         )}
         style={listStyle}
         onDragOver={(e) => {
-          // If another list is being dragged over this list AND a placeholder isn't already active for this spot
           if (draggingListId && draggingListId !== list.id && !isPlaceholderActiveBeforeThisList) {
-            onListDragOver(e, list.id); // Tell parent to show placeholder before this list
-          } 
-          // If a task is being dragged over this list's general area (not a specific task)
-          else if (draggingTaskId) { 
-             onTaskDragOverList(e, list.id, null); // Drop task at end of list if no specific task target
-          } 
-          // Default behavior if no specific drag type matches, allowing drops for tasks on scroll area.
-          else {
+            if (listRef.current) {
+              const rect = listRef.current.getBoundingClientRect();
+              const midpoint = rect.left + rect.width / 2;
+              if (e.clientX < midpoint) { // Mouse is on the left half of THIS list
+                onListDragOver(e, list.id); // Signal to drop BEFORE this list
+              } else { // Mouse on right half of THIS list
+                // Allow event to bubble to parent (swimlane) to handle "end-of-swimlane" or "before-next-list"
+                e.preventDefault(); 
+              }
+            } else {
+              onListDragOver(e, list.id); // Fallback if ref fails
+            }
+          } else if (draggingTaskId) { 
+             onTaskDragOverList(e, list.id, null); 
+          } else {
             e.preventDefault(); 
           }
         }}
@@ -119,6 +124,7 @@ export function KanbanList({
             className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
             draggable
             onDragStart={(e) => { 
+                e.stopPropagation();
                 onListDragStart(e, list.id, swimlaneId); 
             }}
             onDragEnd={onListDragEnd}
@@ -223,4 +229,3 @@ export function KanbanList({
     </>
   );
 }
-
