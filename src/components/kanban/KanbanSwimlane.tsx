@@ -92,7 +92,9 @@ export function KanbanSwimlane({
 
   const handleDropOnSwimlane = (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => {
     event.preventDefault();
-    onSwimlaneDrop(event, targetSwimlaneId);
+    if (draggingSwimlaneId) { // Only handle swimlane drops here
+        onSwimlaneDrop(event, targetSwimlaneId);
+    }
   };
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
@@ -117,6 +119,7 @@ export function KanbanSwimlane({
         style={{ display: 'none' }}
         value={swimlane.color || '#FFFFFF'}
         onChange={handleColorInputChange}
+        data-no-card-click="true"
       />
       <div
         className={cn(
@@ -128,8 +131,7 @@ export function KanbanSwimlane({
         onDragOver={(e) => handleDragOverSwimlane(e, swimlane.id)}
         onDrop={(e) => handleDropOnSwimlane(e, swimlane.id)}
       >
-        {/* Drop indicator for swimlanes above this one */}
-         {dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && (
+         {dropTargetSwimlaneId === swimlane.id && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id && (
           <div className="h-2 bg-primary/50 rounded my-1 flex items-center justify-center">
             <ArrowDown className="h-3 w-3 text-primary-foreground"/>
           </div>
@@ -137,11 +139,12 @@ export function KanbanSwimlane({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div
-              draggable
+              draggable // Swimlane drag handle
               onDragStart={(e) => { e.stopPropagation(); onSwimlaneDragStart(e, swimlane.id); }}
               onDragEnd={onSwimlaneDragEnd}
               className="cursor-grab p-1"
               aria-label="Drag swimlane"
+              data-no-card-click="true"
             >
               <GripVertical className="h-5 w-5 text-muted-foreground hover:text-foreground transition-colors" />
             </div>
@@ -149,7 +152,7 @@ export function KanbanSwimlane({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" data-no-card-click="true">
                 <Settings className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -185,13 +188,13 @@ export function KanbanSwimlane({
                   tasks={tasksInList}
                   onAddTask={onOpenCreateTaskForm}
                   onDropTask={onDropTask}
-                  onDragTaskStart={onDragTaskStart}
-                  onDragTaskEnd={onDragTaskEnd}
+                  onDragTaskStart={onDragTaskStart} // This is for tasks, passed through
+                  onDragTaskEnd={onDragTaskEnd} // This is for tasks, passed through
                   draggingTaskId={draggingTaskId}
                   onOpenCard={onOpenCard}
                   onSetListColor={onSetListColor}
                   onSetTaskColor={onSetTaskColor}
-                  // List D&D Props
+                  // List D&D Props - Crucial for fixing the error
                   onListDragStart={onListDragStart}
                   onListDropOnList={onListDropOnList}
                   onListDragEnd={onListDragEnd}
@@ -218,8 +221,6 @@ export function KanbanSwimlane({
               Drop list here
             </div>
            )}
-          {/* Placeholder for Add List Button within a swimlane - can be reactivated if needed */}
-          {/* <Button variant="outline" className="min-w-80 h-12 self-start">Add List</Button> */}
         </div>
       </div>
     </>
