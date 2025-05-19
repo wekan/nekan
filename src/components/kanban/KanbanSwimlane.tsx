@@ -4,7 +4,7 @@
 import type { Swimlane, List as ListType, Task } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
-import { Menu, Trash2, Palette, PlusCircle } from "lucide-react"; // Removed ArrowDown
+import { Menu, Trash2, Palette, PlusCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -132,7 +132,7 @@ export function KanbanSwimlane({
     onAddSwimlaneFromTemplate(swimlane.id);
   };
 
-  const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1";
+  const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
 
   return (
     <>
@@ -216,7 +216,7 @@ export function KanbanSwimlane({
 
         <div 
           className={cn(
-            "flex gap-2 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out", // Reduced gap for tighter placeholder fit
+            "flex gap-2 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
             isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100"
           )}
           onDragOver={handleDragOverListArea}
@@ -236,8 +236,24 @@ export function KanbanSwimlane({
                 {showListDropPlaceholderBeforeThis && (
                   <div 
                     className={listPlaceholderStyle}
-                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); if (draggingListId) onListDragOver(e, list.id); e.dataTransfer.dropEffect = "move";}}
-                    onDrop={(e) => { if (draggingListId) onListDropOnList(e, list.id, swimlane.id);}}
+                    onDragOver={(e) => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        e.dataTransfer.dropEffect = "move";
+                        // When dragging over this specific placeholder, ensure dropTargetListId remains set to the list
+                        // that this placeholder is "for" (i.e., the list that comes after it).
+                        // This helps in keeping the placeholder active and correctly targeted.
+                        if (draggingListId) {
+                           onListDragOver(e, list.id); // list.id is the ID of the list *after* this placeholder
+                        }
+                    }}
+                    onDrop={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (draggingListId) {
+                            onListDropOnList(e, list.id, swimlane.id); // list.id is the ID of the list *after* this placeholder
+                        }
+                    }}
                   />
                 )}
                 <KanbanList
@@ -262,8 +278,8 @@ export function KanbanSwimlane({
                   onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
-                  dropTargetListId={dropTargetListId}
-                  onListDragOver={onListDragOver}
+                  dropTargetListId={dropTargetListId} // Pass dropTargetListId to KanbanList
+                  onListDragOver={onListDragOver} // Pass onListDragOver to KanbanList
                 />
               </React.Fragment>
             );
@@ -271,8 +287,21 @@ export function KanbanSwimlane({
           {!isAnySwimlaneBeingDragged && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
             <div 
                 className={listPlaceholderStyle}
-                onDragOver={(e) => {e.preventDefault(); e.stopPropagation(); if (draggingListId) onSwimlaneAreaDragOverForList(e, swimlane.id); e.dataTransfer.dropEffect = "move";}}
-                onDrop={(e) => { if (draggingListId) onListDropOnSwimlaneArea(e, swimlane.id);}}
+                onDragOver={(e) => {
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    if (draggingListId) {
+                        onSwimlaneAreaDragOverForList(e, swimlane.id);
+                    }
+                    e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => { 
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (draggingListId) {
+                        onListDropOnSwimlaneArea(e, swimlane.id);
+                    }
+                }}
             />
            )}
         </div>
