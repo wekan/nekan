@@ -22,7 +22,7 @@ import React, { useRef, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 
-interface KanbanSwimlaneProps { // Renamed from SwimlaneProps
+interface KanbanSwimlaneProps { 
   swimlane: SwimlaneType;
   lists: ListType[];
   tasks: Record<string, Task>;
@@ -60,7 +60,7 @@ interface KanbanSwimlaneProps { // Renamed from SwimlaneProps
   onSwimlaneAreaDragOverForList: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
 }
 
-export function KanbanSwimlane({ // Renamed from Swimlane
+export function KanbanSwimlane({ 
   swimlane,
   lists,
   tasks,
@@ -134,14 +134,11 @@ export function KanbanSwimlane({ // Renamed from Swimlane
 
   const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
   
-  const listsToRender = lists.filter(l => l.id !== draggingListId);
-
-
   const swimlaneContentDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
       onSwimlaneDragOver(e, swimlane.id);
    } else {
-       e.preventDefault(); // Important to allow dropping lists onto the swimlane area
+       e.preventDefault(); 
    }
   };
 
@@ -159,14 +156,12 @@ export function KanbanSwimlane({ // Renamed from Swimlane
         className={cn(
           "flex flex-col p-4 rounded-lg shadow-md border transition-all duration-300 ease-in-out",
           isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : "border-border",
-          // isDropTargetForSwimlane ? "ring-2 ring-primary ring-offset-2" : "" // This was for inter-swimlane drop
         )}
         style={swimlaneStyle}
-        onDragOver={swimlaneContentDragOver} // This is for swimlane-on-swimlane
-        // onDrop is handled by placeholders in KanbanBoard for swimlane-on-swimlane
+        onDragOver={swimlaneContentDragOver}
       >
         <div className="flex items-center justify-between mb-4"> 
-          <div className="flex items-center gap-2 shrink-0"> {/* Container for left-aligned controls */}
+          <div className="flex items-center gap-2 shrink-0"> 
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -200,17 +195,15 @@ export function KanbanSwimlane({ // Renamed from Swimlane
             </DropdownMenu>
           </div>
           
-          {/* Draggable Title Area - takes up remaining space and centers title */}
           <div 
             draggable={true} 
             onDragStart={(e) => { 
-              // Use the title itself for a cleaner drag image if possible, or the whole header div
               const titleElement = (e.currentTarget as HTMLElement).querySelector('h2');
               const elementToDrag = titleElement || e.currentTarget;
               const rect = elementToDrag.getBoundingClientRect();
               const xOffset = e.clientX - rect.left;
               const yOffset = e.clientY - rect.top; 
-              try { // setDragImage can fail in some environments if not careful
+              try { 
                   e.dataTransfer.setDragImage(elementToDrag, xOffset, yOffset);
               } catch (err) {
                   // console.warn("setDragImage failed:", err);
@@ -220,32 +213,28 @@ export function KanbanSwimlane({ // Renamed from Swimlane
             onDragEnd={onSwimlaneDragEnd}
             aria-label={`Drag swimlane ${swimlane.name}`}
             data-no-card-click="true"
-            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab" // Changed to flex-1 to allow title to take space
+            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
           >
-            {/* <GripVertical className="h-5 w-5 text-muted-foreground" /> */}
-            <h2 className="text-xl font-semibold text-foreground truncate"> {/* Title is now left-aligned within this flex item */}
+            <h2 className="text-xl font-semibold text-foreground truncate">
                 {swimlane.name}
             </h2>
           </div>
-          {/* Removed spacer div as title is now left-aligned within its flex container */}
         </div>
 
-        {/* Container for lists */}
         <div 
           className={cn(
             "flex gap-2 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
             isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100"
           )}
-          onDragOver={handleDragOverListArea} // For dropping lists onto the swimlane area
-          onDrop={handleDropListOnSwimlaneArea}   // For dropping lists onto the swimlane area
+          onDragOver={handleDragOverListArea} 
+          onDrop={handleDropListOnSwimlaneArea}
         >
-          {!isAnySwimlaneBeingDragged && listsToRender.map((list) => { // Use listsToRender
+          {!isAnySwimlaneBeingDragged && lists.map((list) => { 
             const tasksInList = list.taskIds
               .map(taskId => tasks[taskId])
               .filter(Boolean)
               .sort((a,b) => a.order - b.order) as Task[];
             
-            // Placeholder for dropping a list *before* this list
             const showListDropPlaceholderBeforeThis = draggingListId && 
                                                       dropTargetListId === list.id && 
                                                       draggingListId !== list.id;
@@ -256,66 +245,65 @@ export function KanbanSwimlane({ // Renamed from Swimlane
                     className={listPlaceholderStyle}
                     onDragOver={(e) => { 
                         e.preventDefault(); 
-                        e.stopPropagation(); // Important: stop propagation
+                        e.stopPropagation(); 
                         e.dataTransfer.dropEffect = "move";
-                        // Ensure onListDragOver is called to keep dropTargetListId updated
                         if (draggingListId) {
-                           onListDragOver(e, list.id); // list.id is the target list *after* this placeholder
+                           onListDragOver(e, list.id); 
                         }
                     }}
                     onDrop={(e) => { 
                         e.preventDefault();
-                        e.stopPropagation(); // Important: stop propagation
+                        e.stopPropagation();
                         if (draggingListId) {
-                            onListDropOnList(e, list.id, swimlane.id); // list.id is the target list *after* this placeholder
+                            onListDropOnList(e, list.id, swimlane.id); 
                         }
                     }}
                   />
                 )}
-                <KanbanList // Changed from List to KanbanList
-                  swimlaneId={swimlane.id}
-                  list={list}
-                  tasks={tasksInList}
-                  onAddTask={onOpenCreateTaskForm}
-                  
-                  onDropTask={onDropTask}
-                  onDragTaskStart={onDragTaskStart} 
-                  onDragTaskEnd={onDragTaskEnd} 
-                  draggingTaskId={draggingTaskId}
-                  dropIndicator={dropIndicator}
-                  onTaskDragOverList={onTaskDragOverList}
+                <div className={cn(list.id === draggingListId ? "opacity-30" : "")}>
+                  <KanbanList 
+                    swimlaneId={swimlane.id}
+                    list={list}
+                    tasks={tasksInList}
+                    onAddTask={onOpenCreateTaskForm}
+                    
+                    onDropTask={onDropTask}
+                    onDragTaskStart={onDragTaskStart} 
+                    onDragTaskEnd={onDragTaskEnd} 
+                    draggingTaskId={draggingTaskId}
+                    dropIndicator={dropIndicator}
+                    onTaskDragOverList={onTaskDragOverList}
 
-                  onOpenCard={onOpenCard}
-                  onSetListColor={onSetListColor}
-                  onSetTaskColor={onSetTaskColor}
+                    onOpenCard={onOpenCard}
+                    onSetListColor={onSetListColor}
+                    onSetTaskColor={onSetTaskColor}
 
-                  onListDragStart={onListDragStart}
-                  onListDropOnList={onListDropOnList} // This is for dropping list ON another list (handled by placeholder now)
-                  onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
-                  onListDragEnd={onListDragEnd}
-                  draggingListId={draggingListId}
-                  dropTargetListId={dropTargetListId} 
-                  onListDragOver={onListDragOver} // Pass this down so KanbanList can call it
-                />
+                    onListDragStart={onListDragStart}
+                    onListDropOnList={onListDropOnList} 
+                    onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
+                    onListDragEnd={onListDragEnd}
+                    draggingListId={draggingListId}
+                    dropTargetListId={dropTargetListId} 
+                    onListDragOver={onListDragOver} 
+                  />
+                </div>
               </React.Fragment>
             );
           })}
-          {/* Placeholder for dropping a list at the end of the swimlane */}
           {!isAnySwimlaneBeingDragged && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
             <div 
                 className={listPlaceholderStyle}
                 onDragOver={(e) => {
                     e.preventDefault(); 
-                    e.stopPropagation(); // Important: stop propagation
+                    e.stopPropagation(); 
                     if (draggingListId) {
-                        // Call the swimlane area drag over to keep the target ID set correctly
                         onSwimlaneAreaDragOverForList(e, swimlane.id);
                     }
                     e.dataTransfer.dropEffect = "move";
                 }}
                 onDrop={(e) => { 
                     e.preventDefault();
-                    e.stopPropagation(); // Important: stop propagation
+                    e.stopPropagation(); 
                     if (draggingListId) {
                         onListDropOnSwimlaneArea(e, swimlane.id);
                     }
