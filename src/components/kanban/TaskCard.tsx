@@ -22,9 +22,10 @@ interface TaskCardProps {
   onDragEnd: (event: React.DragEvent<HTMLDivElement>) => void;
   onOpenCard: (taskId: string) => void;
   onSetTaskColor: (taskId: string, color: string) => void;
+  onDeleteTask?: (taskId: string) => void; // Optional: if delete functionality is added
 }
 
-export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard, onSetTaskColor }: TaskCardProps) {
+export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard, onSetTaskColor, onDeleteTask }: TaskCardProps) {
   const [displayDeadline, setDisplayDeadline] = useState<string | undefined>(undefined);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +36,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
         // Attempt to parse assuming YYYY-MM-DD and then format
         const date = new Date(task.deadline + "T00:00:00"); // Ensure parsing as local date
         if (!isNaN(date.valueOf())) {
-            setDisplayDeadline(date.toLocaleDateString());
+            setDisplayDeadline(date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
         } else {
             setDisplayDeadline(task.deadline); // Fallback if parsing fails
         }
@@ -60,6 +61,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
   const cardStyle = task.color ? { backgroundColor: task.color } : {};
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Prevent card click if the click originated from an element that should not trigger it (like a button or handle)
     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
       return;
     }
@@ -72,49 +74,62 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
         type="color"
         ref={colorInputRef}
         style={{ display: 'none' }}
-        value={task.color || '#FFFFFF'}
+        value={task.color || '#FFFFFF'} // Default to white if no color
         onChange={handleColorInputChange}
+        data-no-card-click="true"
       />
       <Card
         onClick={handleCardClick}
         style={cardStyle}
         className={cn(
-          "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow cursor-pointer",
-          isDragging ? "opacity-50 ring-2 ring-primary" : "",
-          "bg-card"
+          "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow cursor-pointer group/taskcard",
+          isDragging ? "opacity-50 ring-2 ring-primary scale-105" : "",
+          "bg-card" // Ensures default card background if no color is set
         )}
       >
-        <CardHeader className="p-0 mb-2 flex flex-row items-start justify-between">
-          <CardTitle className="text-base font-semibold mr-2 flex-1 break-words">{task.title}</CardTitle>
-          <div className="flex items-center shrink-0" data-no-card-click="true">
-            <div
-              draggable
-              onDragStart={(e) => {
-                e.stopPropagation();
-                onDragStart(e, task.id);
-              }}
-              onDragEnd={onDragEnd}
-              className="cursor-grab p-1"
-              aria-label="Drag task"
-            >
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            </div>
+        <CardHeader className="p-0 mb-2 flex flex-row items-center">
+          {/* Drag Handle */}
+          <div
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation(); // Important to prevent card click and other parent handlers
+              onDragStart(e, task.id);
+            }}
+            onDragEnd={onDragEnd}
+            className="cursor-grab p-1 shrink-0 mr-2 opacity-70 group-hover/taskcard:opacity-100 transition-opacity"
+            aria-label="Drag task"
+            data-no-card-click="true"
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          {/* Card Title */}
+          <CardTitle className="text-base font-semibold flex-1 break-words min-w-0"> {/* min-w-0 for proper truncation if needed */}
+            {task.title}
+          </CardTitle>
+
+          {/* Settings Cog */}
+          <div className="shrink-0 ml-2" data-no-card-click="true">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
+                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-70 group-hover/taskcard:opacity-100 transition-opacity">
                   <Settings className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={triggerColorInput}>
+                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
                   <Palette className="mr-2 h-4 w-4" />
                   Change Color
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); alert(`Delete task ${task.title} (not implemented)`); }} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Task
-                </DropdownMenuItem>
+                {onDeleteTask && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onDeleteTask(task.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Task
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -125,8 +140,8 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
           </CardContent>
         )}
         {displayDeadline && (
-          <div className="flex items-center text-xs text-muted-foreground">
-            <CalendarDays className="h-3.5 w-3.5 mr-1" />
+          <div className="flex items-center text-xs text-muted-foreground mt-1">
+            <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
             <span>{displayDeadline}</span>
           </div>
         )}
