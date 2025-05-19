@@ -33,6 +33,7 @@ interface KanbanListProps {
   onListDragEnd: () => void;
   draggingListId: string | null;
   dropTargetListId: string | null;
+  onListDragOver: (event: React.DragEvent<HTMLDivElement>, targetListId: string) => void; // New prop
 }
 
 export function KanbanList({
@@ -52,6 +53,7 @@ export function KanbanList({
   onListDragEnd,
   draggingListId,
   dropTargetListId,
+  onListDragOver, // New prop
 }: KanbanListProps) {
   const listStyle = list.color ? { backgroundColor: list.color } : {};
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -66,6 +68,10 @@ export function KanbanList({
 
   const handleDragOverList = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation(); // Prevent swimlane drag over from interfering
+    if (draggingListId && draggingListId !== list.id) {
+      onListDragOver(event, list.id); // Call the new prop
+    }
   };
   
   const handleDropOnList = (event: React.DragEvent<HTMLDivElement>) => {
@@ -102,7 +108,7 @@ export function KanbanList({
         className={cn(
           "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full relative",
           draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : "",
-           (dropTargetListId === list.id || dropTargetListId === `between-${list.id}`) && draggingListId && draggingListId !== list.id ? "border-dashed border-primary border-2" : ""
+           (dropTargetListId === list.id) && draggingListId && draggingListId !== list.id ? "border-dashed border-primary border-2" : ""
         )}
         style={listStyle}
         onDragOver={handleDragOverList}
@@ -117,7 +123,10 @@ export function KanbanList({
           <div 
             className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
             draggable
-            onDragStart={(e) => { e.stopPropagation(); onListDragStart(e, list.id, swimlaneId); }}
+            onDragStart={(e) => { 
+                // e.stopPropagation(); // Not needed here as it's the primary draggable part
+                onListDragStart(e, list.id, swimlaneId); 
+            }}
             onDragEnd={onListDragEnd}
             aria-label={`Drag list ${list.title}`}
           >
@@ -126,7 +135,7 @@ export function KanbanList({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" data-no-card-click="true">
-                <Menu className="h-4 w-4" /> {/* Changed from Settings */}
+                <Menu className="h-4 w-4" /> 
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">

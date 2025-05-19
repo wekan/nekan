@@ -42,7 +42,7 @@ interface KanbanSwimlaneProps {
 
   onSwimlaneDragStart: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void;
   onSwimlaneDragEnd: () => void;
-  onSwimlaneDragOver?: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void; // For board to know hover target
+  onSwimlaneDragOver?: (event: React.DragEvent<HTMLDivElement>, swimlaneId: string) => void; 
   draggingSwimlaneId: string | null; 
   
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
@@ -51,6 +51,8 @@ interface KanbanSwimlaneProps {
   onListDragEnd: () => void;
   draggingListId: string | null;
   dropTargetListId: string | null;
+  onListDragOver: (event: React.DragEvent<HTMLDivElement>, targetListId: string) => void;
+  onSwimlaneAreaDragOverForList: (event: React.DragEvent<HTMLDivElement>, targetSwimlaneId: string) => void;
 }
 
 export function KanbanSwimlane({
@@ -79,6 +81,8 @@ export function KanbanSwimlane({
   onListDragEnd,
   draggingListId,
   dropTargetListId,
+  onListDragOver,
+  onSwimlaneAreaDragOverForList,
 }: KanbanSwimlaneProps) {
   const swimlaneStyle = swimlane.color ? { backgroundColor: swimlane.color } : {};
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -97,8 +101,9 @@ export function KanbanSwimlane({
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation(); // Prevent swimlane drag over from interfering
     if (draggingListId) {
-        onListDropOnSwimlaneArea(event, swimlane.id);
+        onSwimlaneAreaDragOverForList(event, swimlane.id);
     }
   };
 
@@ -132,11 +137,11 @@ export function KanbanSwimlane({
         className={cn(
           "flex flex-col p-4 rounded-lg shadow-md border relative transition-all duration-300 ease-in-out",
           isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : "border-border",
-          // If this swimlane is NOT the one being dragged, but another swimlane IS being dragged, it should still appear normal
-          // The content collapsing logic below will handle its lists area.
         )}
         style={swimlaneStyle}
-        onDragOver={(e) => onSwimlaneDragOver && onSwimlaneDragOver(e, swimlane.id)}
+        onDragOver={(e) => {
+            onSwimlaneDragOver && onSwimlaneDragOver(e, swimlane.id);
+        }}
       >
         <div className="flex items-center justify-between mb-4"> 
           <div className="flex items-center gap-2 shrink-0">
@@ -176,15 +181,14 @@ export function KanbanSwimlane({
           <div 
             className={cn(
                 "flex items-center gap-2 flex-1 min-w-0 px-2", 
-                "cursor-grab" // Title is always draggable
+                "cursor-grab" 
             )}
             draggable={true} 
             onDragStart={(e) => { 
-              e.stopPropagation();
               const draggedElement = e.currentTarget as HTMLElement;
               const rect = draggedElement.getBoundingClientRect();
               const xOffset = e.clientX - rect.left;
-              const yOffset = e.clientY - rect.top;
+              const yOffset = e.clientY - rect.top; // Adjust yOffset to be relative to the click point within the title
               e.dataTransfer.setDragImage(draggedElement, xOffset, yOffset);
               onSwimlaneDragStart(e, swimlane.id); 
             }}
@@ -204,7 +208,7 @@ export function KanbanSwimlane({
           className={cn(
             "flex gap-4 overflow-x-auto pb-2 relative transition-all duration-200 ease-in-out",
             isAnySwimlaneBeingDragged ? "max-h-0 opacity-0 p-0 m-0 border-none min-h-0 overflow-hidden" : "min-h-[150px] opacity-100",
-            !isAnySwimlaneBeingDragged && dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId ? "border-2 border-dashed border-primary" : ""
+             !isAnySwimlaneBeingDragged && dropTargetListId === `end-of-swimlane-${swimlane.id}` && draggingListId && !lists.find(l=>l.id === dropTargetListId) ? "border-2 border-dashed border-primary p-2" : ""
           )}
           onDragOver={handleDragOverListArea}
           onDrop={handleDropListOnSwimlaneArea}
@@ -234,12 +238,12 @@ export function KanbanSwimlane({
                   onListDragEnd={onListDragEnd}
                   draggingListId={draggingListId}
                   dropTargetListId={dropTargetListId}
+                  onListDragOver={onListDragOver}
                 />
-                {/* Visual cue for dropping list BETWEEN lists - Handled by KanbanList itself now */}
               </React.Fragment>
             );
           })}
-          {!isAnySwimlaneBeingDragged && lists.length === 0 && draggingListId && (
+          {!isAnySwimlaneBeingDragged && lists.length === 0 && draggingListId && dropTargetListId === `end-of-swimlane-${swimlane.id}` && (
             <div className="flex-1 min-w-[200px] border-2 border-dashed border-primary/50 rounded-lg flex items-center justify-center text-primary/70 p-4">
               Drop list here
             </div>
@@ -255,4 +259,3 @@ export function KanbanSwimlane({
     </>
   );
 }
-
