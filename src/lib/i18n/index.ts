@@ -1,9 +1,8 @@
 
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
 
-// Assuming en.i18n.json is in the same directory
 import enTranslations from './en.i18n.json';
 
 const translations: Record<string, Record<string, string>> = {
@@ -22,10 +21,10 @@ export interface LanguageContextType {
   t: (key: string, params?: Record<string, string | number | undefined>) => string;
 }
 
-const LanguageContext = React.createContext<LanguageContextType | undefined>(undefined);
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
-  const [language, setLanguageState] = React.useState<LanguageCode>(() => {
+  const [language, setLanguageState] = useState<LanguageCode>(() => {
     if (typeof window !== 'undefined') {
       const savedLang = localStorage.getItem('kanbanai-lang') as LanguageCode;
       return savedLang && translations[savedLang] ? savedLang : 'en';
@@ -33,29 +32,34 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     return 'en'; // Default language
   });
 
-  const [currentTranslations, setCurrentTranslations] = React.useState<Record<string, string>>(
+  // State for current translations, updated when language changes
+  const [currentTranslations, setCurrentTranslations] = useState<Record<string, string>>(
     () => translations[language] || translations.en
   );
 
-  const setLanguage = React.useCallback((lang: LanguageCode) => {
+  // Effect to update currentTranslations when the language state changes
+  useEffect(() => {
+    setCurrentTranslations(translations[language] || translations.en);
+  }, [language]);
+
+  const setLanguage = useCallback((lang: LanguageCode) => {
     if (translations[lang]) {
       setLanguageState(lang);
-      setCurrentTranslations(translations[lang]);
+      // currentTranslations will be updated by the useEffect hook above
       if (typeof window !== 'undefined') {
         localStorage.setItem('kanbanai-lang', lang);
       }
     } else {
       setLanguageState('en');
-      setCurrentTranslations(translations.en);
+      // currentTranslations will be updated by the useEffect hook above
       if (typeof window !== 'undefined') {
         localStorage.setItem('kanbanai-lang', 'en');
       }
       console.warn("Translations for language \"" + lang + "\" not found. Falling back to English.");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // setLanguageState and setCurrentTranslations are stable
+  }, []); // Dependencies: setLanguageState is stable
 
-  const t = React.useCallback((key: string, params?: Record<string, string | number | undefined>): string => {
+  const t = useCallback((key: string, params?: Record<string, string | number | undefined>): string => {
     let translation = currentTranslations[key] || key; // Fallback to key if translation not found
 
     if (params) {
@@ -89,10 +93,9 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useTranslation = (): LanguageContextType => {
-  const context = React.useContext(LanguageContext);
+  const context = useContext(LanguageContext);
   if (context === undefined) {
     throw new Error('useTranslation must be used within an I18nProvider');
   }
   return context;
 };
-
