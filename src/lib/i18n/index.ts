@@ -32,7 +32,6 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     return 'en'; // Default language
   });
 
-  // State for current translations, updated when language changes
   const [currentTranslations, setCurrentTranslations] = useState<Record<string, string>>(
     () => translations[language] || translations.en
   );
@@ -55,9 +54,9 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('kanbanai-lang', 'en');
       }
-      console.warn("Translations for language \"" + lang + "\" not found. Falling back to English.");
+      console.warn("Translations for language " + lang + " not found. Falling back to English.");
     }
-  }, []); // Dependencies: setLanguageState is stable
+  }, []); // setLanguageState is stable
 
   const t = useCallback((key: string, params?: Record<string, string | number | undefined>): string => {
     let translation = currentTranslations[key] || key; // Fallback to key if translation not found
