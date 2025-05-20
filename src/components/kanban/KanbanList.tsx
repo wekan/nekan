@@ -121,7 +121,7 @@ export function KanbanList({
       >
         <div className="p-3 border-b border-border flex items-center justify-between">
           <div 
-            className="flex items-center gap-1 flex-1 min-w-0" 
+            className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
             draggable 
             onDragStart={(e) => { 
                 e.stopPropagation();
@@ -222,7 +222,7 @@ export function KanbanList({
         </ScrollArea>
         <div className="p-3 border-t border-border">
           <Button variant="outline" className="w-full" onClick={() => onAddTask(list.id)}>
-            <Plus className="mr-2 h-4 w-4" /> Add Task
+            <Plus className="mr-2 h-4 w-4" /> Add Card
           </Button>
         </div>
       </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,7 +62,7 @@ export function CreateTaskForm({ isOpen, onOpenChange, onSubmit }: CreateTaskFor
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-background">
         <DialogHeader>
-          <DialogTitle>Add New Task</DialogTitle>
+          <DialogTitle>Add New Card</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -72,7 +73,7 @@ export function CreateTaskForm({ isOpen, onOpenChange, onSubmit }: CreateTaskFor
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter task title" {...field} />
+                    <Input placeholder="Enter card title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -85,7 +86,7 @@ export function CreateTaskForm({ isOpen, onOpenChange, onSubmit }: CreateTaskFor
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter task description (optional)" {...field} />
+                    <Textarea placeholder="Enter card description (optional)" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -134,7 +135,7 @@ export function CreateTaskForm({ isOpen, onOpenChange, onSubmit }: CreateTaskFor
               <DialogClose asChild>
                 <Button type="button" variant="outline">Cancel</Button>
               </DialogClose>
-              <Button type="submit">Add Task</Button>
+              <Button type="submit">Add Card</Button>
             </DialogFooter>
           </form>
         </Form>
