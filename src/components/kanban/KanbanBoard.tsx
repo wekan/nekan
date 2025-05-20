@@ -1,22 +1,22 @@
-
 "use client";
 
-import type { Board as BoardType, List as ListType, Card as CardType, Swimlane as SwimlaneType } from "@/lib/types"; // Updated CardType
+import type { Board as BoardType, List as ListType, Card as CardType, Swimlane as SwimlaneType } from "@/lib/types";
 import { KanbanSwimlane } from "./KanbanSwimlane"; 
-import { CreateCardForm } from "./CreateCardForm"; // Renamed
+import { CreateCardForm } from "./CreateCardForm";
 import { ShareBoardDialog } from "./ShareBoardDialog";
 import { BoardHeader } from "./BoardHeader";
 import React, { useState, useEffect } from "react";
-import { rankCards, RankCardsInput } from "@/ai/flows/rank-cards"; // Renamed
+import { rankCards, RankCardsInput } from "@/ai/flows/rank-cards";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { AddSwimlaneDialog } from "./AddSwimlaneDialog"; 
+import { useTranslation } from "@/lib/i18n";
 
 const initialBoardData: BoardType = {
   id: "board-1",
-  name: "KanbanAI Project",
-  cards: { // Renamed from tasks
+  name: "KanbanAI Project", // This could be translated if board name is static or comes from a translatable source
+  cards: { 
     "card-1": { id: "card-1", title: "Setup project structure", description: "Initialize Next.js app, install dependencies.", deadline: "2024-08-01", order: 0, color: "#FFFFFF" },
     "card-2": { id: "card-2", title: "Design UI components", description: "Create Card, List, Swimlane components.", deadline: "2024-08-05", order: 0, color: "#FFFFFF" },
     "card-3": { id: "card-3", title: "Implement drag and drop for cards", description: "Allow cards to be moved between lists.", deadline: "2024-08-10", order: 0, color: "#FFFFFF" },
@@ -24,13 +24,13 @@ const initialBoardData: BoardType = {
     "card-5": { id: "card-5", title: "Add share board feature (mock)", description: "Implement UI for sharing boards.", deadline: "2024-08-20", order: 0, color: "#FFF5E1" },
     "card-6": { id: "card-6", title: "Write documentation", description: "Document components and features.", deadline: "2024-08-25", order: 2, color: "#FFFFFF" },
   },
-  lists: {
-    "list-1": { id: "list-1", title: "Backlog", cardIds: ["card-5"], order: 0, color: "#F3F4F6" }, // Renamed taskIds
-    "list-2": { id: "list-2", title: "To Do", cardIds: ["card-3", "card-4", "card-6"], order: 0, color: "#FFFFFF" }, // Renamed taskIds
-    "list-3": { id: "list-3", title: "In Progress", cardIds: ["card-2"], order: 1, color: "#FFFFFF" }, // Renamed taskIds
-    "list-4": { id: "list-4", title: "Done", cardIds: ["card-1"], order: 2, color: "#E0F2FE" }, // Renamed taskIds
+  lists: { // Titles here will be translated if they match keys, or use t() if dynamic generation
+    "list-1": { id: "list-1", title: "Backlog", cardIds: ["card-5"], order: 0, color: "#F3F4F6" }, 
+    "list-2": { id: "list-2", title: "To Do", cardIds: ["card-3", "card-4", "card-6"], order: 0, color: "#FFFFFF" }, 
+    "list-3": { id: "list-3", title: "In Progress", cardIds: ["card-2"], order: 1, color: "#FFFFFF" }, 
+    "list-4": { id: "list-4", title: "Done", cardIds: ["card-1"], order: 2, color: "#E0F2FE" }, 
   },
-  swimlanes: {
+  swimlanes: { // Names here will be translated if they match keys
     "swim-1": { id: "swim-1", name: "Core Features", listIds: ["list-2", "list-3"], order: 0, color: "#E0E7FF" },
     "swim-2": { id: "swim-2", name: "Support & Docs", listIds: ["list-1", "list-4"], order: 1, color: "#FEF3C7" },
   },
@@ -40,15 +40,44 @@ const initialBoardData: BoardType = {
 
 export function KanbanBoard() {
   const [board, setBoard] = useState<BoardType>(initialBoardData);
-  const [isCreateCardFormOpen, setCreateCardFormOpen] = useState(false); // Renamed
-  const [selectedListIdForNewCard, setSelectedListIdForNewCard] = useState<string | null>(null); // Renamed
+  const [isCreateCardFormOpen, setCreateCardFormOpen] = useState(false);
+  const [selectedListIdForNewCard, setSelectedListIdForNewCard] = useState<string | null>(null);
   const [isShareDialogOpen, setShareDialogOpen] = useState(false);
   const [isRanking, setIsRanking] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
-  const [draggingCardId, setDraggingCardId] = useState<string | null>(null); // Renamed
-  const [draggedCardInfo, setDraggedCardInfo] = useState<{cardId: string, sourceListId: string} | null>(null); // Renamed
-  const [dropIndicator, setDropIndicator] = useState<{ listId: string; beforeCardId: string | null } | null>(null); // Renamed beforeTaskId
+  useEffect(() => {
+    // Translate initial board data names/titles if necessary
+    // This is a simplified example; a more robust solution might involve transforming data on load
+    setBoard(prevBoard => ({
+      ...prevBoard,
+      name: t('welcome-board'), // Example: translate board name
+      lists: Object.fromEntries(
+        Object.entries(prevBoard.lists).map(([id, list]) => {
+          let translatedTitle = list.title;
+          if (list.title.toLowerCase() === 'backlog') translatedTitle = t('listTitleBacklog');
+          else if (list.title.toLowerCase() === 'to do') translatedTitle = t('listTitleToDo');
+          else if (list.title.toLowerCase() === 'in progress') translatedTitle = t('listTitleInProgress');
+          else if (list.title.toLowerCase() === 'done') translatedTitle = t('listTitleDone');
+          return [id, { ...list, title: translatedTitle }];
+        })
+      ),
+      swimlanes: Object.fromEntries(
+        Object.entries(prevBoard.swimlanes).map(([id, swimlane]) => {
+          let translatedName = swimlane.name;
+          if (swimlane.name === 'Core Features') translatedName = t('swimlaneTitleCoreFeatures');
+          else if (swimlane.name === 'Support & Docs') translatedName = t('swimlaneTitleSupportDocs');
+          return [id, { ...swimlane, name: translatedName }];
+        })
+      ),
+    }));
+  }, [t]); // Rerun when t function changes (language changes)
+
+
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+  const [draggedCardInfo, setDraggedCardInfo] = useState<{cardId: string, sourceListId: string} | null>(null);
+  const [dropIndicator, setDropIndicator] = useState<{ listId: string; beforeCardId: string | null } | null>(null);
   
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
   const [draggedListInfo, setDraggedListInfo] = useState<{ listId: string; sourceSwimlaneId: string; sourceListIndex: number } | null>(null);
@@ -58,19 +87,19 @@ export function KanbanBoard() {
   const [dropTargetSwimlaneId, setDropTargetSwimlaneId] = useState<string | null>(null);
 
 
-  const handleOpenCreateCardForm = (listId: string) => { // Renamed
+  const handleOpenCreateCardForm = (listId: string) => {
     setSelectedListIdForNewCard(listId);
     setCreateCardFormOpen(true);
   };
 
-  const handleCreateCard = (values: { title: string; description?: string; deadline?: Date }) => { // Renamed
+  const handleCreateCard = (values: { title: string; description?: string; deadline?: Date }) => {
     if (!selectedListIdForNewCard) return;
 
-    const newCardId = `card-${Date.now()}`; // Renamed
+    const newCardId = `card-${Date.now()}`;
     const targetList = board.lists[selectedListIdForNewCard];
-    const newCardOrder = targetList ? targetList.cardIds.length : 0; // Renamed cardIds
+    const newCardOrder = targetList ? targetList.cardIds.length : 0;
 
-    const newCard: CardType = { // Renamed
+    const newCard: CardType = {
       id: newCardId,
       title: values.title,
       description: values.description,
@@ -80,23 +109,26 @@ export function KanbanBoard() {
     };
 
     setBoard(prevBoard => {
-      const newCards = { ...prevBoard.cards, [newCardId]: newCard }; // Renamed
+      const newCards = { ...prevBoard.cards, [newCardId]: newCard };
       const newLists = { ...prevBoard.lists };
       if (newLists[selectedListIdForNewCard]) {
         newLists[selectedListIdForNewCard] = {
           ...newLists[selectedListIdForNewCard],
-          cardIds: [...newLists[selectedListIdForNewCard].cardIds, newCardId], // Renamed cardIds
+          cardIds: [...newLists[selectedListIdForNewCard].cardIds, newCardId],
         };
       }
-      return { ...prevBoard, cards: newCards, lists: newLists }; // Renamed
+      return { ...prevBoard, cards: newCards, lists: newLists };
     });
 
-    toast({ title: "Card Created", description: `"${newCard.title}" added to list "${board.lists[selectedListIdForNewCard]?.title}".` });
+    toast({ 
+      title: t('toastCardCreatedTitle'), 
+      description: t('toastCardCreatedDescription', { cardTitle: newCard.title, listTitle: board.lists[selectedListIdForNewCard]?.title || '' }) 
+    });
   };
 
   const handleAddSwimlaneToEnd = () => { 
     const newSwimlaneId = `swim-${Date.now()}`;
-    const newSwimlaneName = `New Swimlane ${Object.keys(board.swimlanes).length + 1}`;
+    const newSwimlaneName = `${t('new')} ${t('swimlane')} ${Object.keys(board.swimlanes).length + 1}`;
     const newSwimlane: SwimlaneType = {
       id: newSwimlaneId,
       name: newSwimlaneName,
@@ -113,14 +145,17 @@ export function KanbanBoard() {
       },
       swimlaneOrder: [...prevBoard.swimlaneOrder, newSwimlaneId],
     }));
-    toast({ title: "Swimlane Added", description: `"${newSwimlaneName}" has been added to the end of the board.` });
+    toast({ 
+      title: t('toastSwimlaneAddedTitle'), 
+      description: t('toastSwimlaneAddedDescription', { swimlaneName: newSwimlaneName })
+    });
   };
 
   const handleAddSwimlaneBelow = (name: string, referenceSwimlaneId: string) => {
     const newSwimlaneId = `swim-${Date.now()}`;
     const newSwimlane: SwimlaneType = {
       id: newSwimlaneId,
-      name: name || `New Swimlane ${Object.keys(board.swimlanes).length + 1}`,
+      name: name || `${t('new')} ${t('swimlane')} ${Object.keys(board.swimlanes).length + 1}`,
       listIds: [],
       order: 0, 
       color: "#F9FAFB",
@@ -149,13 +184,16 @@ export function KanbanBoard() {
         swimlaneOrder: newSwimlaneOrder,
       };
     });
-    toast({ title: "Swimlane Added", description: `"${newSwimlane.name}" added below "${board.swimlanes[referenceSwimlaneId]?.name}".` });
+    toast({ 
+      title: t('toastSwimlaneAddedTitle'), 
+      description: t('toastSwimlaneAddedDescription', { swimlaneName: newSwimlane.name }) 
+    });
   };
 
   const handleAddSwimlaneFromTemplate = (referenceSwimlaneId: string) => {
     toast({
-      title: "Feature Not Implemented",
-      description: "Adding swimlanes from templates is coming soon!",
+      title: t('toastFeatureNotImplementedTitle'),
+      description: t('toastFeatureNotImplementedDescription'),
     });
   };
 
@@ -165,13 +203,13 @@ export function KanbanBoard() {
       const swimlaneToDelete = prevBoard.swimlanes[swimlaneId];
       if (!swimlaneToDelete) return prevBoard;
 
-      const newCards = { ...prevBoard.cards }; // Renamed
+      const newCards = { ...prevBoard.cards };
       const newLists = { ...prevBoard.lists };
       swimlaneToDelete.listIds.forEach(listId => {
         const list = newLists[listId];
         if (list) {
-          list.cardIds.forEach(cardId => { // Renamed
-            delete newCards[cardId]; // Renamed
+          list.cardIds.forEach(cardId => {
+            delete newCards[cardId];
           });
         }
         delete newLists[listId];
@@ -190,18 +228,22 @@ export function KanbanBoard() {
 
       return {
         ...prevBoard,
-        cards: newCards, // Renamed
+        cards: newCards,
         lists: newLists,
         swimlanes: newSwimlanes,
         swimlaneOrder: newSwimlaneOrder,
       };
     });
-    toast({ title: "Swimlane Deleted", description: `Swimlane and its contents have been deleted.` });
+    toast({ 
+      title: t('toastSwimlaneDeletedTitle'), 
+      description: t('toastSwimlaneDeletedDescription')
+    });
   };
   
-  const handleOpenCard = (cardId: string) => { // Renamed
-    const card = board.cards[cardId]; // Renamed
+  const handleOpenCard = (cardId: string) => {
+    const card = board.cards[cardId];
     if (card) {
+      // This toast is more for debugging, might not need full translation or could be replaced by a modal
       toast({
         title: `Card Clicked: ${card.title}`,
         description: `ID: ${cardId}. Details: ${card.description || 'No description'}. Deadline: ${card.deadline || 'None'}`,
@@ -209,13 +251,13 @@ export function KanbanBoard() {
     }
   };
 
-  const handleDragCardStart = (event: React.DragEvent<HTMLDivElement>, cardId: string) => { // Renamed
+  const handleDragCardStart = (event: React.DragEvent<HTMLDivElement>, cardId: string) => {
     let sourceListId: string | undefined;
     for (const swimlaneId of board.swimlaneOrder) {
         const swimlane = board.swimlanes[swimlaneId];
         if (swimlane) {
             for (const listId of swimlane.listIds) {
-                if (board.lists[listId]?.cardIds.includes(cardId)) { // Renamed
+                if (board.lists[listId]?.cardIds.includes(cardId)) {
                     sourceListId = listId;
                     break;
                 }
@@ -225,34 +267,34 @@ export function KanbanBoard() {
     }
   
     if (sourceListId) {
-      event.dataTransfer.setData("cardId", cardId); // Renamed
+      event.dataTransfer.setData("cardId", cardId);
       event.dataTransfer.setData("sourceListId", sourceListId); 
-      setDraggingCardId(cardId); // Renamed
-      setDraggedCardInfo({ cardId, sourceListId }); // Renamed
+      setDraggingCardId(cardId);
+      setDraggedCardInfo({ cardId, sourceListId });
       event.dataTransfer.effectAllowed = "move";
     }
   };
   
 
-  const handleDragCardEnd = () => { // Renamed
-    setDraggingCardId(null); // Renamed
-    setDraggedCardInfo(null); // Renamed
+  const handleDragCardEnd = () => {
+    setDraggingCardId(null);
+    setDraggedCardInfo(null);
     setDropIndicator(null);
   };
 
-  const handleDropCard = (event: React.DragEvent<HTMLDivElement>, currentTargetListId: string, currentTargetCardId?: string) => { // Renamed
+  const handleDropCard = (event: React.DragEvent<HTMLDivElement>, currentTargetListId: string, currentTargetCardId?: string) => {
     event.preventDefault();
     event.stopPropagation();
     if (!draggedCardInfo) return; 
   
-    const { cardId: movedCardId, sourceListId: currentSourceListId } = draggedCardInfo; // Renamed
+    const { cardId: movedCardId, sourceListId: currentSourceListId } = draggedCardInfo; 
   
     setBoard(prevBoard => {
       const newBoardState = { ...prevBoard };
       const newListsState = { ...newBoardState.lists };
-      const newCardsState = { ...newBoardState.cards }; // Renamed
+      const newCardsState = { ...newBoardState.cards }; 
   
-      let sourceListCardIdsCopy = [...newListsState[currentSourceListId].cardIds]; // Renamed
+      let sourceListCardIdsCopy = [...newListsState[currentSourceListId].cardIds]; 
       
       if (currentSourceListId === currentTargetListId) {
         const cardIndexInSource = sourceListCardIdsCopy.indexOf(movedCardId);
@@ -264,12 +306,12 @@ export function KanbanBoard() {
         if (cardIndexInSource > -1) {
           sourceListCardIdsCopy.splice(cardIndexInSource, 1);
         }
-        newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], cardIds: sourceListCardIdsCopy }; // Renamed
+        newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], cardIds: sourceListCardIdsCopy };
       }
       
       let finalCardIdsForTargetList = (currentSourceListId === currentTargetListId)
         ? sourceListCardIdsCopy
-        : (newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].cardIds] : []); // Renamed
+        : (newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].cardIds] : []);
 
       const cardIndexInTargetPreInsert = finalCardIdsForTargetList.indexOf(movedCardId);
       if (cardIndexInTargetPreInsert > -1) {
@@ -282,13 +324,13 @@ export function KanbanBoard() {
       } else {
         finalCardIdsForTargetList.push(movedCardId); 
       }
-      newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], cardIds: finalCardIdsForTargetList }; // Renamed
+      newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], cardIds: finalCardIdsForTargetList }; 
       
       const affectedListIds = new Set([currentSourceListId, currentTargetListId]);
       affectedListIds.forEach(listId => {
         const list = newListsState[listId];
         if (list) {
-          list.cardIds.forEach((cId, index) => { // Renamed
+          list.cardIds.forEach((cId, index) => {
             if (newCardsState[cId]) {
               newCardsState[cId] = { ...newCardsState[cId], order: index };
             }
@@ -296,17 +338,17 @@ export function KanbanBoard() {
         }
       });
       
-      return { ...newBoardState, lists: newListsState, cards: newCardsState }; // Renamed
+      return { ...newBoardState, lists: newListsState, cards: newCardsState }; 
     });
   
     setDropIndicator(null); 
   };
 
-  const handleCardDragOverList = (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => { // Renamed
+  const handleCardDragOverList = (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => {
     event.preventDefault();
     event.stopPropagation();
-    if (draggingCardId) { // Renamed
-      setDropIndicator({ listId: targetListId, beforeCardId: targetCardId || null }); // Renamed
+    if (draggingCardId) {
+      setDropIndicator({ listId: targetListId, beforeCardId: targetCardId || null });
       event.dataTransfer.dropEffect = "move";
     }
   };
@@ -375,7 +417,7 @@ export function KanbanBoard() {
     });
 
     setDropTargetSwimlaneId(null);
-    setDraggingSwimlaneId(null); // Also reset draggingSwimlaneId here
+    setDraggingSwimlaneId(null); 
   };
 
   const handleSwimlaneDragEnd = () => {
@@ -424,6 +466,8 @@ export function KanbanBoard() {
 
     if (!movedListId || !sourceSwimlaneId || movedListId === targetListId) {
       setDropTargetListId(null);
+      setDraggingListId(null);
+      setDraggedListInfo(null);
       return;
     }
 
@@ -498,6 +542,8 @@ export function KanbanBoard() {
     
     if (!movedListId || !sourceSwimlaneId) {
         setDropTargetListId(null);
+        setDraggingListId(null);
+        setDraggedListInfo(null);
         return;
     }
         
@@ -505,6 +551,8 @@ export function KanbanBoard() {
         board.swimlanes[sourceSwimlaneId].listIds.length <=1 && 
         board.swimlanes[sourceSwimlaneId].listIds[0] === movedListId) {
       setDropTargetListId(null);
+      setDraggingListId(null);
+      setDraggedListInfo(null);
       return;
     }
 
@@ -570,7 +618,7 @@ export function KanbanBoard() {
   };
 
 
-  const handleRankCards = async () => { // Renamed
+  const handleRankCards = async () => {
     let todoListId: string | undefined;
     let todoList: ListType | undefined;
 
@@ -578,7 +626,7 @@ export function KanbanBoard() {
         const swimlane = board.swimlanes[swimlaneId];
         if (!swimlane) continue;
         for (const listId of swimlane.listIds) {
-            if (board.lists[listId]?.title.toLowerCase() === "to do") {
+            if (board.lists[listId]?.title.toLowerCase() === t('listTitleToDo').toLowerCase()) {
                 todoListId = listId;
                 todoList = board.lists[listId];
                 break;
@@ -587,16 +635,16 @@ export function KanbanBoard() {
         if (todoList) break; 
     }
 
-    if (!todoList || !todoListId || todoList.cardIds.length === 0) { // Renamed
-      toast({ title: "No Cards to Rank", description: "Could not find a 'To Do' list with cards." });
+    if (!todoList || !todoListId || todoList.cardIds.length === 0) {
+      toast({ title: t('toastNoCardsToRankTitle'), description: t('toastNoCardsToRankDescriptionToDo') });
       return;
     }
     const finalTodoListId = todoListId; 
 
     setIsRanking(true);
     try {
-      const cardsToRank: RankCardsInput["cards"] = todoList.cardIds // Renamed
-        .map(cardId => board.cards[cardId]) // Renamed
+      const cardsToRank: RankCardsInput["cards"] = todoList.cardIds
+        .map(cardId => board.cards[cardId])
         .filter(card => card) 
         .map(card => ({
           id: card.id,
@@ -605,24 +653,24 @@ export function KanbanBoard() {
         }));
 
       if (cardsToRank.length === 0) {
-         toast({ title: "No Cards to Rank", description: "No valid cards found in 'To Do' list." });
+         toast({ title: t('toastNoCardsToRankTitle'), description: t('toastNoCardsToRankDescriptionValid') });
          setIsRanking(false);
          return;
       }
 
-      const rankedResults = await rankCards({ cards: cardsToRank }); // Renamed
+      const rankedResults = await rankCards({ cards: cardsToRank });
 
       setBoard(prevBoard => {
         const newBoard = { ...prevBoard };
         const newLists = { ...newBoard.lists };
-        const newCards = { ...newBoard.cards }; // Renamed
+        const newCards = { ...newBoard.cards };
         const targetList = newLists[finalTodoListId]; 
         if (!targetList) return prevBoard; 
 
-        const currentTodoCardIds = [...targetList.cardIds]; // Renamed
+        const currentTodoCardIds = [...targetList.cardIds];
         const rankMap = new Map(rankedResults.map(r => [r.id, r.rank]));
         
-        const newOrderedCardIds = [...currentTodoCardIds].sort((aId, bId) => { // Renamed
+        const newOrderedCardIds = [...currentTodoCardIds].sort((aId, bId) => {
             const rankA = rankMap.get(aId);
             const rankB = rankMap.get(bId);
             if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
@@ -631,21 +679,21 @@ export function KanbanBoard() {
             return 0; 
         });
         
-        newLists[finalTodoListId] = { ...targetList, cardIds: newOrderedCardIds }; // Renamed
+        newLists[finalTodoListId] = { ...targetList, cardIds: newOrderedCardIds };
         
-        newOrderedCardIds.forEach((cardId, index) => { // Renamed
+        newOrderedCardIds.forEach((cardId, index) => {
           if (newCards[cardId]) {
             newCards[cardId] = { ...newCards[cardId], order: index };
           }
         });
         
-        return { ...newBoard, lists: newLists, cards: newCards }; // Renamed
+        return { ...newBoard, lists: newLists, cards: newCards };
       });
 
-      toast({ title: "Cards Ranked", description: `Cards in "${todoList.title}" list have been reordered by AI.` });
+      toast({ title: t('toastCardsRankedTitle'), description: t('toastCardsRankedDescription', { listTitle: todoList.title }) });
     } catch (error) {
       console.error("Error ranking cards:", error);
-      toast({ variant: "destructive", title: "Ranking Failed", description: "Could not rank cards. Please try again." });
+      toast({ variant: "destructive", title: t('toastRankingFailedTitle'), description: t('toastRankingFailedDescription') });
     } finally {
       setIsRanking(false);
     }
@@ -659,7 +707,7 @@ export function KanbanBoard() {
       }
       return { ...prevBoard, swimlanes: newSwimlanes };
     });
-    toast({ title: "Swimlane color updated" });
+    toast({ title: t('toastSwimlaneColorUpdated') });
   };
 
   const handleSetListColor = (listId: string, color: string) => {
@@ -670,18 +718,18 @@ export function KanbanBoard() {
       }
       return { ...prevBoard, lists: newLists };
     });
-    toast({ title: "List color updated" });
+    toast({ title: t('toastListColorUpdated') });
   };
 
-  const handleSetCardColor = (cardId: string, color: string) => { // Renamed
+  const handleSetCardColor = (cardId: string, color: string) => {
     setBoard(prevBoard => {
-      const newCards = { ...prevBoard.cards }; // Renamed
+      const newCards = { ...prevBoard.cards };
       if (newCards[cardId]) {
          newCards[cardId] = { ...newCards[cardId], color };
       }
-      return { ...prevBoard, cards: newCards }; // Renamed
+      return { ...prevBoard, cards: newCards };
     });
-    toast({ title: "Card color updated" });
+    toast({ title: t('toastCardColorUpdated') });
   };
 
 
@@ -689,9 +737,8 @@ export function KanbanBoard() {
     <div className="flex flex-col h-full">
       <BoardHeader
         boardName={board.name}
-        onRankTasks={handleRankCards} // Renamed
+        onRankCards={handleRankCards}
         onShareBoard={() => setShareDialogOpen(true)}
-        onAddSwimlane={handleAddSwimlaneToEnd} 
         isRanking={isRanking}
       />
       <div 
@@ -717,12 +764,12 @@ export function KanbanBoard() {
             <React.Fragment key={swimlane.id}>
               {draggingSwimlaneId && draggingSwimlaneId !== swimlaneId && dropTargetSwimlaneId === swimlaneId && (
                 <div
-                  className="h-16 bg-white border-2 border-black border-dashed rounded-lg my-2" 
+                  className="h-16 bg-background border-2 border-foreground border-dashed rounded-lg my-2" 
                   onDragOver={(e) => { 
                     e.preventDefault(); 
                     e.stopPropagation(); 
                     e.dataTransfer.dropEffect = "move"; 
-                    if (draggingSwimlaneId) setDropTargetSwimlaneId(swimlaneId); 
+                    if (draggingSwimlaneId) handleSwimlaneDragOver(e, swimlaneId); 
                   }}
                   onDrop={(e) => handleSwimlaneDrop(e, swimlaneId)}
                 />
@@ -730,21 +777,21 @@ export function KanbanBoard() {
               <KanbanSwimlane
                 swimlane={swimlane}
                 lists={listsInSwimlane}
-                cards={board.cards} // Renamed
-                onOpenCreateCardForm={handleOpenCreateCardForm} // Renamed
+                cards={board.cards}
+                onOpenCreateCardForm={handleOpenCreateCardForm}
                 
-                onDropCard={handleDropCard} // Renamed
-                onDragCardStart={handleDragCardStart} // Renamed
-                onDragCardEnd={handleDragCardEnd} // Renamed
-                draggingCardId={draggingCardId} // Renamed
+                onDropCard={handleDropCard}
+                onDragCardStart={handleDragCardStart}
+                onDragCardEnd={handleDragCardEnd}
+                draggingCardId={draggingCardId}
                 dropIndicator={dropIndicator}
-                onCardDragOverList={handleCardDragOverList} // Renamed
+                onCardDragOverList={handleCardDragOverList}
 
                 onDeleteSwimlane={handleDeleteSwimlane}
                 onOpenCard={handleOpenCard}
                 onSetSwimlaneColor={handleSetSwimlaneColor}
                 onSetListColor={handleSetListColor}
-                onSetCardColor={handleSetCardColor} // Renamed
+                onSetCardColor={handleSetCardColor}
                 
                 onAddSwimlaneBelow={handleAddSwimlaneBelow}
                 onAddSwimlaneFromTemplate={handleAddSwimlaneFromTemplate}
@@ -769,21 +816,21 @@ export function KanbanBoard() {
         })}
         {draggingSwimlaneId && dropTargetSwimlaneId === "end-of-board" && (
             <div
-                className="h-16 bg-white border-2 border-black border-dashed rounded-lg my-2" 
+                className="h-16 bg-background border-2 border-foreground border-dashed rounded-lg my-2" 
                 onDragOver={(e) => { 
                     e.preventDefault(); 
                     e.stopPropagation();
                     e.dataTransfer.dropEffect = "move"; 
-                    if (draggingSwimlaneId) setDropTargetSwimlaneId("end-of-board"); 
+                    if (draggingSwimlaneId) handleBoardAreaDragOver(e);
                 }}
                 onDrop={(e) => handleSwimlaneDrop(e)}
             />
         )}
       </div>
-      <CreateCardForm // Renamed
-        isOpen={isCreateCardFormOpen} // Renamed
-        onOpenChange={setCreateCardFormOpen} // Renamed
-        onSubmit={handleCreateCard} // Renamed
+      <CreateCardForm
+        isOpen={isCreateCardFormOpen}
+        onOpenChange={setCreateCardFormOpen}
+        onSubmit={handleCreateCard}
       />
       <ShareBoardDialog
         isOpen={isShareDialogOpen}

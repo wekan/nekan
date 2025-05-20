@@ -1,4 +1,3 @@
-
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,9 +27,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useTranslation } from "@/lib/i18n";
 
 const cardFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Title is required"), // Validation messages could also be translated
   description: z.string().optional(),
   deadline: z.date().optional(),
 });
@@ -44,6 +44,7 @@ interface CreateCardFormProps {
 }
 
 export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFormProps) {
+  const { t } = useTranslation();
   const form = useForm<CardFormValues>({
     resolver: zodResolver(cardFormSchema),
     defaultValues: {
@@ -58,11 +59,16 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
     onOpenChange(false);
   };
 
+  // Update Zod schema error messages if needed
+  // For example: title: z.string().min(1, t('titleRequiredError'))
+  // This requires t to be available at module scope or passed differently.
+  // For now, keeping English validation messages.
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-background">
         <DialogHeader>
-          <DialogTitle>Add New Card</DialogTitle>
+          <DialogTitle>{t('add-card')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -71,9 +77,9 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
               name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Title</FormLabel>
+                  <FormLabel>{t('title')}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter card title" {...field} />
+                    <Input placeholder={t('enterCardTitlePlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -84,9 +90,9 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('description')}</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Enter card description (optional)" {...field} />
+                    <Textarea placeholder={t('enterCardDescriptionPlaceholder')} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -97,7 +103,7 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
               name="deadline"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Deadline</FormLabel>
+                  <FormLabel>{t('card-due')}</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -111,7 +117,7 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
                           {field.value ? (
                             format(field.value, "PPP")
                           ) : (
-                            <span>Pick a date</span>
+                            <span>{t('pickADatePlaceholder')}</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -133,9 +139,9 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
             />
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline">Cancel</Button>
+                <Button type="button" variant="outline">{t('cancel')}</Button>
               </DialogClose>
-              <Button type="submit">Add Card</Button>
+              <Button type="submit">{t('add-card')}</Button>
             </DialogFooter>
           </form>
         </Form>

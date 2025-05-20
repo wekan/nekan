@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import type { Card as CardType } from "@/lib/types"; // Updated type import
+import type { Card as CardType } from "@/lib/types";
 import { Card as ShadCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Menu, Trash2, Palette } from "lucide-react";
@@ -14,20 +13,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
 
-interface CardProps { // Renamed interface
-  card: CardType; // Renamed prop
+interface CardProps {
+  card: CardType;
   isDragging?: boolean;
-  onDragStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void; // Renamed param
+  onDragStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void;
   onDragEnd: (event: React.DragEvent<HTMLDivElement>) => void;
-  onOpenCard: (cardId: string) => void; // Renamed param
-  onSetCardColor: (cardId: string, color: string) => void; // Renamed prop and param
-  onDeleteCard?: (cardId: string) => void; // Renamed prop and param
+  onOpenCard: (cardId: string) => void;
+  onSetCardColor: (cardId: string, color: string) => void;
+  onDeleteCard?: (cardId: string) => void;
 }
 
 export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onSetCardColor, onDeleteCard }: CardProps) {
   const [displayDeadline, setDisplayDeadline] = useState<string | undefined>(undefined);
   const colorInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (card.deadline) {
@@ -67,7 +68,10 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
   };
   
   const handleTitleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging && !(e.target as HTMLElement).closest('[draggable="true"]')) { 
+     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) { // Prevent if click on menu trigger
+      return;
+    }
+    if (!isDragging ) { 
         onOpenCard(card.id);
     }
   };
@@ -100,7 +104,7 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
             onDragEnd={onDragEnd}
             onClick={handleTitleClick}
             className="flex-1 min-w-0 cursor-grab group-hover/card:opacity-100 transition-opacity"
-            aria-label={`Drag card ${card.title}`}
+            aria-label={t('dragCardAriaLabel', { cardTitle: card.title })}
           >
             <CardTitle className="text-base font-semibold break-words">
               {card.title}
@@ -117,14 +121,14 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
                   <Palette className="mr-2 h-4 w-4" />
-                  Change Color
+                  {t('setCardColorPopup-title')}
                 </DropdownMenuItem>
                 {onDeleteCard && (
                   <>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => onDeleteCard(card.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Card
+                      {t('cardDeletePopup-title')}
                     </DropdownMenuItem>
                   </>
                 )}

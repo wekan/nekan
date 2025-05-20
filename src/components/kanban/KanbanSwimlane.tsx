@@ -1,7 +1,6 @@
-
 "use client";
 
-import type { Swimlane as SwimlaneType, List as ListType, Card as CardType } from "@/lib/types"; // Updated CardType
+import type { Swimlane as SwimlaneType, List as ListType, Card as CardType } from "@/lib/types";
 import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
 import { Menu, Trash2, Palette, Plus } from "lucide-react";
@@ -21,26 +20,27 @@ import {
 import React, { useRef, useState } from 'react';
 import { cn } from "@/lib/utils";
 import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
+import { useTranslation } from "@/lib/i18n";
 
 interface KanbanSwimlaneProps { 
   swimlane: SwimlaneType;
   lists: ListType[];
-  cards: Record<string, CardType>; // Renamed from tasks
-  onOpenCreateCardForm: (listId: string) => void; // Renamed
+  cards: Record<string, CardType>;
+  onOpenCreateCardForm: (listId: string) => void;
   
-  onDropCard: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetCardId?: string) => void; // Renamed
-  onDragCardStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void; // Renamed
-  onDragCardEnd: (event: React.DragEvent<HTMLDivElement>) => void; // Renamed
-  draggingCardId: string | null; // Renamed
-  dropIndicator: { listId: string; beforeCardId: string | null } | null;  // Renamed beforeTaskId
-  onCardDragOverList: (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => void; // Renamed
+  onDropCard: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetCardId?: string) => void;
+  onDragCardStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void;
+  onDragCardEnd: (event: React.DragEvent<HTMLDivElement>) => void;
+  draggingCardId: string | null;
+  dropIndicator: { listId: string; beforeCardId: string | null } | null;
+  onCardDragOverList: (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => void;
 
 
   onDeleteSwimlane: (swimlaneId: string) => void;
-  onOpenCard: (cardId: string) => void; // Renamed
+  onOpenCard: (cardId: string) => void;
   onSetSwimlaneColor: (swimlaneId: string, color: string) => void;
   onSetListColor: (listId: string, color: string) => void;
-  onSetCardColor: (cardId: string, color: string) => void; // Renamed
+  onSetCardColor: (cardId: string, color: string) => void;
   
   onAddSwimlaneBelow: (name: string, referenceSwimlaneId: string) => void;
   onAddSwimlaneFromTemplate: (referenceSwimlaneId: string) => void;
@@ -63,21 +63,21 @@ interface KanbanSwimlaneProps {
 export function KanbanSwimlane({ 
   swimlane,
   lists,
-  cards, // Renamed
-  onOpenCreateCardForm, // Renamed
+  cards,
+  onOpenCreateCardForm,
   
-  onDropCard, // Renamed
-  onDragCardStart, // Renamed
-  onDragCardEnd, // Renamed
-  draggingCardId, // Renamed
+  onDropCard,
+  onDragCardStart,
+  onDragCardEnd,
+  draggingCardId,
   dropIndicator,
-  onCardDragOverList, // Renamed
+  onCardDragOverList,
 
   onDeleteSwimlane,
   onOpenCard,
   onSetSwimlaneColor,
   onSetListColor,
-  onSetCardColor, // Renamed
+  onSetCardColor,
   onAddSwimlaneBelow,
   onAddSwimlaneFromTemplate,
   onSwimlaneDragStart,
@@ -93,6 +93,7 @@ export function KanbanSwimlane({
   onListDragOver,
   onSwimlaneAreaDragOverForList,
 }: KanbanSwimlaneProps) {
+  const { t } = useTranslation();
   const swimlaneStyle = swimlane.color ? { backgroundColor: swimlane.color } : {};
   const colorInputRef = useRef<HTMLInputElement>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
@@ -134,7 +135,7 @@ export function KanbanSwimlane({
 
   const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
   
-  const listsToRender = lists; // Do not filter out the dragged list here, handle opacity in KanbanList
+  const listsToRender = lists;
 
   const swimlaneContentDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
@@ -172,7 +173,7 @@ export function KanbanSwimlane({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Add Swimlane</p>
+                  <p>{t('add-swimlane')}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -186,12 +187,12 @@ export function KanbanSwimlane({
               <DropdownMenuContent align="start">
                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
                   <Palette className="mr-2 h-4 w-4" />
-                  Change Color
+                  {t('setSwimlaneColorPopup-title')}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDeleteSwimlane(swimlane.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                   <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Swimlane
+                  {t('swimlaneDeletePopup-title')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -213,7 +214,7 @@ export function KanbanSwimlane({
               onSwimlaneDragStart(e, swimlane.id); 
             }}
             onDragEnd={onSwimlaneDragEnd}
-            aria-label={`Drag swimlane ${swimlane.name}`}
+            aria-label={t('dragSwimlaneAriaLabel', { swimlaneName: swimlane.name })}
             data-no-card-click="true"
             className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
           >
@@ -232,10 +233,10 @@ export function KanbanSwimlane({
           onDrop={handleDropListOnSwimlaneArea}
         >
           {!isAnySwimlaneBeingDragged && listsToRender.map((list) => { 
-            const cardsInList = list.cardIds // Renamed from taskIds
-              .map(cardId => cards[cardId]) // Renamed from tasks
+            const cardsInList = list.cardIds
+              .map(cardId => cards[cardId])
               .filter(Boolean)
-              .sort((a,b) => a.order - b.order) as CardType[]; // Updated CardType
+              .sort((a,b) => a.order - b.order) as CardType[];
             
             const showListDropPlaceholderBeforeThis = draggingListId && 
                                                       dropTargetListId === list.id && 
@@ -249,7 +250,7 @@ export function KanbanSwimlane({
                         e.preventDefault(); 
                         e.stopPropagation(); 
                         e.dataTransfer.dropEffect = "move";
-                        if (draggingListId) {
+                         if (draggingListId) {
                            onListDragOver(e, list.id); 
                         }
                     }}
@@ -266,19 +267,19 @@ export function KanbanSwimlane({
                   <KanbanList 
                     swimlaneId={swimlane.id}
                     list={list}
-                    cards={cardsInList} // Renamed
-                    onAddCard={onOpenCreateCardForm} // Renamed
+                    cards={cardsInList}
+                    onAddCard={onOpenCreateCardForm}
                     
-                    onDropCard={onDropCard} // Renamed
-                    onDragCardStart={onDragCardStart}  // Renamed
-                    onDragCardEnd={onDragCardEnd}  // Renamed
-                    draggingCardId={draggingCardId} // Renamed
+                    onDropCard={onDropCard}
+                    onDragCardStart={onDragCardStart}
+                    onDragCardEnd={onDragCardEnd}
+                    draggingCardId={draggingCardId}
                     dropIndicator={dropIndicator}
-                    onCardDragOverList={onCardDragOverList} // Renamed
+                    onCardDragOverList={onCardDragOverList}
 
                     onOpenCard={onOpenCard}
                     onSetListColor={onSetListColor}
-                    onSetCardColor={onSetCardColor} // Renamed
+                    onSetCardColor={onSetCardColor}
 
                     onListDragStart={onListDragStart}
                     onListDropOnList={onListDropOnList} 
