@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import type { Task } from "@/lib/types";
-import { Card as ShadCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card"; // Renamed to avoid conflict with component
+import type { Card as CardType } from "@/lib/types"; // Updated type import
+import { Card as ShadCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Menu, Trash2, Palette } from "lucide-react";
 import {
@@ -15,62 +15,61 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-interface CardProps {
-  task: Task;
+interface CardProps { // Renamed interface
+  card: CardType; // Renamed prop
   isDragging?: boolean;
-  onDragStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
+  onDragStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void; // Renamed param
   onDragEnd: (event: React.DragEvent<HTMLDivElement>) => void;
-  onOpenCard: (taskId: string) => void;
-  onSetTaskColor: (taskId: string, color: string) => void;
-  onDeleteTask?: (taskId: string) => void;
+  onOpenCard: (cardId: string) => void; // Renamed param
+  onSetCardColor: (cardId: string, color: string) => void; // Renamed prop and param
+  onDeleteCard?: (cardId: string) => void; // Renamed prop and param
 }
 
-export function Card({ task, isDragging, onDragStart, onDragEnd, onOpenCard, onSetTaskColor, onDeleteTask }: CardProps) {
+export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onSetCardColor, onDeleteCard }: CardProps) {
   const [displayDeadline, setDisplayDeadline] = useState<string | undefined>(undefined);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (task.deadline) {
+    if (card.deadline) {
       try {
-        const date = new Date(task.deadline + "T00:00:00");
+        const date = new Date(card.deadline + "T00:00:00");
         if (!isNaN(date.valueOf())) {
             setDisplayDeadline(date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }));
         } else {
-            setDisplayDeadline(task.deadline); 
+            setDisplayDeadline(card.deadline); 
         }
       } catch (e) {
-        setDisplayDeadline(task.deadline);
+        setDisplayDeadline(card.deadline);
       }
     } else {
       setDisplayDeadline(undefined);
     }
-  }, [task.deadline]);
+  }, [card.deadline]);
 
 
   const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onSetTaskColor(task.id, event.target.value);
+    onSetCardColor(card.id, event.target.value);
   };
 
   const triggerColorInput = () => {
     colorInputRef.current?.click();
   };
 
-  const cardStyle = task.color ? { backgroundColor: task.color } : {};
+  const cardStyle = card.color ? { backgroundColor: card.color } : {};
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
       return;
     }
     if (!isDragging && !(e.target as HTMLElement).closest('[draggable="true"]')) {
-        onOpenCard(task.id);
+        onOpenCard(card.id);
     }
   };
   
   const handleTitleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isDragging && !(e.target as HTMLElement).closest('[draggable="true"]')) { // Check if not dragging part of title
-        onOpenCard(task.id);
+    if (!isDragging && !(e.target as HTMLElement).closest('[draggable="true"]')) { 
+        onOpenCard(card.id);
     }
-    // If it is the draggable part, onDragStart will handle it, and we don't want to open.
   };
 
 
@@ -80,32 +79,31 @@ export function Card({ task, isDragging, onDragStart, onDragEnd, onOpenCard, onS
         type="color"
         ref={colorInputRef}
         style={{ display: 'none' }}
-        value={task.color || '#FFFFFF'}
+        value={card.color || '#FFFFFF'}
         onChange={handleColorInputChange}
         data-no-card-click="true"
       />
-      <ShadCard // Using aliased ShadCN Card
+      <ShadCard
         style={cardStyle}
         className={cn(
-          "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow group/card", // Renamed group
+          "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow group/card", 
           isDragging ? "opacity-50 ring-2 ring-primary scale-105" : "",
-          "bg-card" // Ensuring ShadCN Card's bg-card is used unless overridden by task.color
+          "bg-card"
         )}
       >
         <CardHeader className="p-0 mb-2 flex flex-row items-center justify-between gap-2">
           <div
             draggable
             onDragStart={(e) => {
-              // e.stopPropagation(); // Allow drag from title
-              onDragStart(e, task.id);
+              onDragStart(e, card.id);
             }}
             onDragEnd={onDragEnd}
-            onClick={handleTitleClick} // This will now handle opening the card
+            onClick={handleTitleClick}
             className="flex-1 min-w-0 cursor-grab group-hover/card:opacity-100 transition-opacity"
-            aria-label={`Drag task ${task.title}`}
+            aria-label={`Drag card ${card.title}`}
           >
             <CardTitle className="text-base font-semibold break-words">
-              {task.title}
+              {card.title}
             </CardTitle>
           </div>
 
@@ -121,12 +119,12 @@ export function Card({ task, isDragging, onDragStart, onDragEnd, onOpenCard, onS
                   <Palette className="mr-2 h-4 w-4" />
                   Change Color
                 </DropdownMenuItem>
-                {onDeleteTask && (
+                {onDeleteCard && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDeleteTask(task.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
+                    <DropdownMenuItem onClick={() => onDeleteCard(card.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                       <Trash2 className="mr-2 h-4 w-4" />
-                      Delete Task
+                      Delete Card
                     </DropdownMenuItem>
                   </>
                 )}
@@ -134,9 +132,9 @@ export function Card({ task, isDragging, onDragStart, onDragEnd, onOpenCard, onS
             </DropdownMenu>
           </div>
         </CardHeader>
-        {task.description && (
+        {card.description && (
           <CardContent className="p-0 mb-2" onClick={handleCardClick} style={{cursor: 'pointer'}}>
-            <p className="text-sm text-muted-foreground break-words">{task.description}</p>
+            <p className="text-sm text-muted-foreground break-words">{card.description}</p>
           </CardContent>
         )}
         {displayDeadline && (

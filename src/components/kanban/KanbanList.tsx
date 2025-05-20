@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { List as ListType, Task } from "@/lib/types";
-import { TaskCard } from "./TaskCard";
+import type { List as ListType, Card as CardType } from "@/lib/types"; // Updated CardType import
+import { Card } from "./Card"; // Updated import
 import { Button } from "@/components/ui/button";
 import { Plus, Menu, Trash2, Palette } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,19 +19,19 @@ import { cn } from "@/lib/utils";
 interface KanbanListProps {
   list: ListType;
   swimlaneId: string;
-  tasks: Task[];
-  onAddTask: (listId: string) => void;
+  cards: CardType[]; // Renamed from tasks
+  onAddCard: (listId: string) => void; // Renamed from onAddTask
   
-  onDropTask: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => void;
-  onDragTaskStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
-  onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
-  draggingTaskId: string | null;
-  dropIndicator: { listId: string; beforeTaskId: string | null } | null;
-  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string | null) => void; 
+  onDropCard: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetCardId?: string) => void; // Renamed
+  onDragCardStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void; // Renamed
+  onDragCardEnd: (event: React.DragEvent<HTMLDivElement>) => void; // Renamed
+  draggingCardId: string | null; // Renamed
+  dropIndicator: { listId: string; beforeCardId: string | null } | null; // Renamed beforeTaskId
+  onCardDragOverList: (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => void;  // Renamed
 
-  onOpenCard: (taskId: string) => void;
+  onOpenCard: (cardId: string) => void; // Renamed
   onSetListColor: (listId: string, color: string) => void;
-  onSetTaskColor: (taskId: string, color: string) => void;
+  onSetCardColor: (cardId: string, color: string) => void; // Renamed
   
   onListDragStart: (event: React.DragEvent<HTMLDivElement>, listId: string, sourceSwimlaneId: string) => void;
   onListDropOnList: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetSwimlaneId: string) => void;
@@ -44,22 +44,21 @@ interface KanbanListProps {
 export function KanbanList({
   list,
   swimlaneId,
-  tasks,
-  onAddTask,
+  cards, // Renamed
+  onAddCard, // Renamed
   
-  onDropTask,
-  onDragTaskStart,
-  onDragTaskEnd,
-  draggingTaskId,
+  onDropCard, // Renamed
+  onDragCardStart, // Renamed
+  onDragCardEnd, // Renamed
+  draggingCardId, // Renamed
   dropIndicator,
-  onTaskDragOverList,
+  onCardDragOverList, // Renamed
 
   onOpenCard,
   onSetListColor,
-  onSetTaskColor,
+  onSetCardColor, // Renamed
 
   onListDragStart,
-  // onListDropOnList is handled by placeholders in KanbanSwimlane
   onListDragEnd,
   draggingListId,
   dropTargetListId, 
@@ -103,17 +102,16 @@ export function KanbanList({
             if (listRef.current) {
               const rect = listRef.current.getBoundingClientRect();
               const midpoint = rect.left + rect.width / 2;
-              if (e.clientX < midpoint) { // Mouse is on the left half of THIS list
-                onListDragOver(e, list.id); // Signal to drop BEFORE this list
-              } else { // Mouse on right half of THIS list
-                // Allow event to bubble to parent (swimlane) to handle "end-of-swimlane" or "before-next-list"
+              if (e.clientX < midpoint) {
+                onListDragOver(e, list.id); 
+              } else { 
                 e.preventDefault(); 
               }
             } else {
-              onListDragOver(e, list.id); // Fallback if ref fails
+              onListDragOver(e, list.id); 
             }
-          } else if (draggingTaskId) { 
-             onTaskDragOverList(e, list.id, null); 
+          } else if (draggingCardId) { 
+             onCardDragOverList(e, list.id, null); 
           } else {
             e.preventDefault(); 
           }
@@ -131,7 +129,7 @@ export function KanbanList({
             aria-label={`Drag list ${list.title}`}
             data-no-card-click="true" 
           >
-            <h3 className="font-semibold text-lg text-foreground truncate">{list.title} <span className="text-sm text-muted-foreground">({tasks.length})</span></h3>
+            <h3 className="font-semibold text-lg text-foreground truncate">{list.title} <span className="text-sm text-muted-foreground">({cards.length})</span></h3> {/* Updated to cards.length */}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -155,73 +153,73 @@ export function KanbanList({
         <ScrollArea 
             className="flex-1 p-3"
             onDragOver={(e) => { 
-              if (draggingTaskId) {
-                onTaskDragOverList(e, list.id, null); 
+              if (draggingCardId) {
+                onCardDragOverList(e, list.id, null); 
               }
             }}
             onDrop={(e) => { 
-                 if (draggingTaskId && dropIndicator?.listId === list.id && dropIndicator?.beforeTaskId === null) {
-                    onDropTask(e, list.id, undefined); 
+                 if (draggingCardId && dropIndicator?.listId === list.id && dropIndicator?.beforeCardId === null) { // Renamed beforeTaskId
+                    onDropCard(e, list.id, undefined); 
                  } else {
                     e.preventDefault(); 
                  }
             }}
         >
-          {tasks.length === 0 && draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === null && (
+          {cards.length === 0 && draggingCardId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeCardId === null && (
             <div
               className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onTaskDragOverList(e, list.id, null); e.dataTransfer.dropEffect = "move"; }}
-              onDrop={(e) => onDropTask(e, list.id, undefined)}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onCardDragOverList(e, list.id, null); e.dataTransfer.dropEffect = "move"; }}
+              onDrop={(e) => onDropCard(e, list.id, undefined)} // Renamed
             />
           )}
-          {tasks.length === 0 && !draggingTaskId && (
+          {cards.length === 0 && !draggingCardId && (
              <div 
               className="flex-1 min-h-[100px] flex items-center justify-center text-muted-foreground opacity-75 rounded border border-dashed border-muted-foreground/30"
             >
-              Drop tasks here or add new
+              Drop cards here or add new
             </div>
           )}
 
-          {tasks.map((task) => (
-            <React.Fragment key={task.id}>
-              {draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === task.id && (
+          {cards.map((card) => ( // Renamed task to card
+            <React.Fragment key={card.id}>
+              {draggingCardId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeCardId === card.id && ( // Renamed beforeTaskId
                 <div
                   className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
-                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onTaskDragOverList(e, list.id, task.id); e.dataTransfer.dropEffect = "move"; }}
-                  onDrop={(e) => onDropTask(e, list.id, task.id)}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onCardDragOverList(e, list.id, card.id); e.dataTransfer.dropEffect = "move"; }}
+                  onDrop={(e) => onDropCard(e, list.id, card.id)} // Renamed
                 />
               )}
               <div 
                 onDragOver={(e) => { 
-                  if (draggingTaskId && draggingTaskId !== task.id) { 
-                    onTaskDragOverList(e, list.id, task.id);
+                  if (draggingCardId && draggingCardId !== card.id) { 
+                    onCardDragOverList(e, list.id, card.id);
                   } else {
                      e.preventDefault(); 
                   }
                 }}
               >
-                <TaskCard
-                  task={task}
-                  isDragging={draggingTaskId === task.id}
-                  onDragStart={onDragTaskStart} 
-                  onDragEnd={onDragTaskEnd}     
+                <Card // Renamed TaskCard to Card
+                  card={card} // Renamed task prop to card
+                  isDragging={draggingCardId === card.id}
+                  onDragStart={onDragCardStart} 
+                  onDragEnd={onDragCardEnd}     
                   onOpenCard={onOpenCard}
-                  onSetTaskColor={onSetTaskColor}
+                  onSetCardColor={onSetCardColor} // Renamed
                 />
               </div>
             </React.Fragment>
           ))}
-          {tasks.length > 0 && draggingTaskId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeTaskId === null && 
-           !tasks.find(t => dropIndicator.beforeTaskId === t.id) && ( 
+          {cards.length > 0 && draggingCardId && dropIndicator && dropIndicator.listId === list.id && dropIndicator.beforeCardId === null && 
+           !cards.find(c => dropIndicator.beforeCardId === c.id) && ( 
             <div
               className="h-12 bg-background border-2 border-foreground border-dashed rounded-md my-1 opacity-75"
-              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onTaskDragOverList(e, list.id, null); e.dataTransfer.dropEffect = "move"; }}
-              onDrop={(e) => onDropTask(e, list.id, undefined)} 
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); onCardDragOverList(e, list.id, null); e.dataTransfer.dropEffect = "move"; }}
+              onDrop={(e) => onDropCard(e, list.id, undefined)}  // Renamed
             />
           )}
         </ScrollArea>
         <div className="p-3 border-t border-border">
-          <Button variant="outline" className="w-full" onClick={() => onAddTask(list.id)}>
+          <Button variant="outline" className="w-full" onClick={() => onAddCard(list.id)}> {/* Renamed */}
             <Plus className="mr-2 h-4 w-4" /> Add Card
           </Button>
         </div>

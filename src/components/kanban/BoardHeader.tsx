@@ -6,7 +6,7 @@ import { Wand2, Users, Loader2, PlusCircle } from "lucide-react";
 
 interface BoardHeaderProps {
   boardName: string;
-  onRankTasks: () => void;
+  onRankTasks: () => void; // This will be onRankCards effectively from KanbanBoard
   onShareBoard: () => void;
   onAddSwimlane: () => void;
   isRanking: boolean;
@@ -26,7 +26,7 @@ export function BoardHeader({ boardName, onRankTasks, onShareBoard, onAddSwimlan
           ) : (
             <Wand2 className="mr-2 h-4 w-4" />
           )}
-          AI Rank Tasks
+          AI Rank Cards
         </Button>
         <Button variant="outline" onClick={onShareBoard}>
           <Users className="mr-2 h-4 w-4" /> Share Board

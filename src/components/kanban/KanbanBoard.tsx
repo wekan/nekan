@@ -1,13 +1,13 @@
 
 "use client";
 
-import type { Board as BoardType, List as ListType, Task, Swimlane as SwimlaneType } from "@/lib/types";
+import type { Board as BoardType, List as ListType, Card as CardType, Swimlane as SwimlaneType } from "@/lib/types"; // Updated CardType
 import { KanbanSwimlane } from "./KanbanSwimlane"; 
-import { CreateTaskForm } from "./CreateTaskForm";
+import { CreateCardForm } from "./CreateCardForm"; // Renamed
 import { ShareBoardDialog } from "./ShareBoardDialog";
 import { BoardHeader } from "./BoardHeader";
 import React, { useState, useEffect } from "react";
-import { rankTasks, RankTasksInput } from "@/ai/flows/rank-tasks";
+import { rankCards, RankCardsInput } from "@/ai/flows/rank-cards"; // Renamed
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -16,19 +16,19 @@ import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 const initialBoardData: BoardType = {
   id: "board-1",
   name: "KanbanAI Project",
-  tasks: {
-    "task-1": { id: "task-1", title: "Setup project structure", description: "Initialize Next.js app, install dependencies.", deadline: "2024-08-01", order: 0, color: "#FFFFFF" },
-    "task-2": { id: "task-2", title: "Design UI components", description: "Create Card, List, Swimlane components.", deadline: "2024-08-05", order: 0, color: "#FFFFFF" },
-    "task-3": { id: "task-3", title: "Implement drag and drop for tasks", description: "Allow tasks to be moved between lists.", deadline: "2024-08-10", order: 0, color: "#FFFFFF" },
-    "task-4": { id: "task-4", title: "Integrate AI task ranker", description: "Connect to GenAI flow for task prioritization.", deadline: "2024-08-15", order: 1, color: "#FFFFFF" },
-    "task-5": { id: "task-5", title: "Add share board feature (mock)", description: "Implement UI for sharing boards.", deadline: "2024-08-20", order: 0, color: "#FFF5E1" },
-    "task-6": { id: "task-6", title: "Write documentation", description: "Document components and features.", deadline: "2024-08-25", order: 2, color: "#FFFFFF" },
+  cards: { // Renamed from tasks
+    "card-1": { id: "card-1", title: "Setup project structure", description: "Initialize Next.js app, install dependencies.", deadline: "2024-08-01", order: 0, color: "#FFFFFF" },
+    "card-2": { id: "card-2", title: "Design UI components", description: "Create Card, List, Swimlane components.", deadline: "2024-08-05", order: 0, color: "#FFFFFF" },
+    "card-3": { id: "card-3", title: "Implement drag and drop for cards", description: "Allow cards to be moved between lists.", deadline: "2024-08-10", order: 0, color: "#FFFFFF" },
+    "card-4": { id: "card-4", title: "Integrate AI card ranker", description: "Connect to GenAI flow for card prioritization.", deadline: "2024-08-15", order: 1, color: "#FFFFFF" },
+    "card-5": { id: "card-5", title: "Add share board feature (mock)", description: "Implement UI for sharing boards.", deadline: "2024-08-20", order: 0, color: "#FFF5E1" },
+    "card-6": { id: "card-6", title: "Write documentation", description: "Document components and features.", deadline: "2024-08-25", order: 2, color: "#FFFFFF" },
   },
   lists: {
-    "list-1": { id: "list-1", title: "Backlog", taskIds: ["task-5"], order: 0, color: "#F3F4F6" },
-    "list-2": { id: "list-2", title: "To Do", taskIds: ["task-3", "task-4", "task-6"], order: 0, color: "#FFFFFF" },
-    "list-3": { id: "list-3", title: "In Progress", taskIds: ["task-2"], order: 1, color: "#FFFFFF" },
-    "list-4": { id: "list-4", title: "Done", taskIds: ["task-1"], order: 2, color: "#E0F2FE" },
+    "list-1": { id: "list-1", title: "Backlog", cardIds: ["card-5"], order: 0, color: "#F3F4F6" }, // Renamed taskIds
+    "list-2": { id: "list-2", title: "To Do", cardIds: ["card-3", "card-4", "card-6"], order: 0, color: "#FFFFFF" }, // Renamed taskIds
+    "list-3": { id: "list-3", title: "In Progress", cardIds: ["card-2"], order: 1, color: "#FFFFFF" }, // Renamed taskIds
+    "list-4": { id: "list-4", title: "Done", cardIds: ["card-1"], order: 2, color: "#E0F2FE" }, // Renamed taskIds
   },
   swimlanes: {
     "swim-1": { id: "swim-1", name: "Core Features", listIds: ["list-2", "list-3"], order: 0, color: "#E0E7FF" },
@@ -40,15 +40,15 @@ const initialBoardData: BoardType = {
 
 export function KanbanBoard() {
   const [board, setBoard] = useState<BoardType>(initialBoardData);
-  const [isCreateTaskFormOpen, setCreateTaskFormOpen] = useState(false);
-  const [selectedListIdForNewTask, setSelectedListIdForNewTask] = useState<string | null>(null);
+  const [isCreateCardFormOpen, setCreateCardFormOpen] = useState(false); // Renamed
+  const [selectedListIdForNewCard, setSelectedListIdForNewCard] = useState<string | null>(null); // Renamed
   const [isShareDialogOpen, setShareDialogOpen] = useState(false);
   const [isRanking, setIsRanking] = useState(false);
   const { toast } = useToast();
 
-  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const [draggedTaskInfo, setDraggedTaskInfo] = useState<{taskId: string, sourceListId: string} | null>(null);
-  const [dropIndicator, setDropIndicator] = useState<{ listId: string; beforeTaskId: string | null } | null>(null);
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null); // Renamed
+  const [draggedCardInfo, setDraggedCardInfo] = useState<{cardId: string, sourceListId: string} | null>(null); // Renamed
+  const [dropIndicator, setDropIndicator] = useState<{ listId: string; beforeCardId: string | null } | null>(null); // Renamed beforeTaskId
   
   const [draggingListId, setDraggingListId] = useState<string | null>(null);
   const [draggedListInfo, setDraggedListInfo] = useState<{ listId: string; sourceSwimlaneId: string; sourceListIndex: number } | null>(null);
@@ -58,40 +58,40 @@ export function KanbanBoard() {
   const [dropTargetSwimlaneId, setDropTargetSwimlaneId] = useState<string | null>(null);
 
 
-  const handleOpenCreateTaskForm = (listId: string) => {
-    setSelectedListIdForNewTask(listId);
-    setCreateTaskFormOpen(true);
+  const handleOpenCreateCardForm = (listId: string) => { // Renamed
+    setSelectedListIdForNewCard(listId);
+    setCreateCardFormOpen(true);
   };
 
-  const handleCreateTask = (values: { title: string; description?: string; deadline?: Date }) => {
-    if (!selectedListIdForNewTask) return;
+  const handleCreateCard = (values: { title: string; description?: string; deadline?: Date }) => { // Renamed
+    if (!selectedListIdForNewCard) return;
 
-    const newTaskId = `task-${Date.now()}`;
-    const targetList = board.lists[selectedListIdForNewTask];
-    const newTaskOrder = targetList ? targetList.taskIds.length : 0;
+    const newCardId = `card-${Date.now()}`; // Renamed
+    const targetList = board.lists[selectedListIdForNewCard];
+    const newCardOrder = targetList ? targetList.cardIds.length : 0; // Renamed cardIds
 
-    const newTask: Task = {
-      id: newTaskId,
+    const newCard: CardType = { // Renamed
+      id: newCardId,
       title: values.title,
       description: values.description,
       deadline: values.deadline ? format(values.deadline, "yyyy-MM-dd") : undefined,
-      order: newTaskOrder,
+      order: newCardOrder,
       color: "#FFFFFF", 
     };
 
     setBoard(prevBoard => {
-      const newTasks = { ...prevBoard.tasks, [newTaskId]: newTask };
+      const newCards = { ...prevBoard.cards, [newCardId]: newCard }; // Renamed
       const newLists = { ...prevBoard.lists };
-      if (newLists[selectedListIdForNewTask]) {
-        newLists[selectedListIdForNewTask] = {
-          ...newLists[selectedListIdForNewTask],
-          taskIds: [...newLists[selectedListIdForNewTask].taskIds, newTaskId],
+      if (newLists[selectedListIdForNewCard]) {
+        newLists[selectedListIdForNewCard] = {
+          ...newLists[selectedListIdForNewCard],
+          cardIds: [...newLists[selectedListIdForNewCard].cardIds, newCardId], // Renamed cardIds
         };
       }
-      return { ...prevBoard, tasks: newTasks, lists: newLists };
+      return { ...prevBoard, cards: newCards, lists: newLists }; // Renamed
     });
 
-    toast({ title: "Card Created", description: `"${newTask.title}" added to list "${board.lists[selectedListIdForNewTask]?.title}".` });
+    toast({ title: "Card Created", description: `"${newCard.title}" added to list "${board.lists[selectedListIdForNewCard]?.title}".` });
   };
 
   const handleAddSwimlaneToEnd = () => { 
@@ -165,13 +165,13 @@ export function KanbanBoard() {
       const swimlaneToDelete = prevBoard.swimlanes[swimlaneId];
       if (!swimlaneToDelete) return prevBoard;
 
-      const newTasks = { ...prevBoard.tasks };
+      const newCards = { ...prevBoard.cards }; // Renamed
       const newLists = { ...prevBoard.lists };
       swimlaneToDelete.listIds.forEach(listId => {
         const list = newLists[listId];
         if (list) {
-          list.taskIds.forEach(taskId => {
-            delete newTasks[taskId];
+          list.cardIds.forEach(cardId => { // Renamed
+            delete newCards[cardId]; // Renamed
           });
         }
         delete newLists[listId];
@@ -190,7 +190,7 @@ export function KanbanBoard() {
 
       return {
         ...prevBoard,
-        tasks: newTasks,
+        cards: newCards, // Renamed
         lists: newLists,
         swimlanes: newSwimlanes,
         swimlaneOrder: newSwimlaneOrder,
@@ -199,23 +199,23 @@ export function KanbanBoard() {
     toast({ title: "Swimlane Deleted", description: `Swimlane and its contents have been deleted.` });
   };
   
-  const handleOpenCard = (taskId: string) => {
-    const task = board.tasks[taskId];
-    if (task) {
+  const handleOpenCard = (cardId: string) => { // Renamed
+    const card = board.cards[cardId]; // Renamed
+    if (card) {
       toast({
-        title: `Card Clicked: ${task.title}`,
-        description: `ID: ${taskId}. Details: ${task.description || 'No description'}. Deadline: ${task.deadline || 'None'}`,
+        title: `Card Clicked: ${card.title}`,
+        description: `ID: ${cardId}. Details: ${card.description || 'No description'}. Deadline: ${card.deadline || 'None'}`,
       });
     }
   };
 
-  const handleDragTaskStart = (event: React.DragEvent<HTMLDivElement>, taskId: string) => {
+  const handleDragCardStart = (event: React.DragEvent<HTMLDivElement>, cardId: string) => { // Renamed
     let sourceListId: string | undefined;
     for (const swimlaneId of board.swimlaneOrder) {
         const swimlane = board.swimlanes[swimlaneId];
         if (swimlane) {
             for (const listId of swimlane.listIds) {
-                if (board.lists[listId]?.taskIds.includes(taskId)) {
+                if (board.lists[listId]?.cardIds.includes(cardId)) { // Renamed
                     sourceListId = listId;
                     break;
                 }
@@ -225,92 +225,88 @@ export function KanbanBoard() {
     }
   
     if (sourceListId) {
-      event.dataTransfer.setData("taskId", taskId);
+      event.dataTransfer.setData("cardId", cardId); // Renamed
       event.dataTransfer.setData("sourceListId", sourceListId); 
-      setDraggingTaskId(taskId);
-      setDraggedTaskInfo({ taskId, sourceListId }); 
+      setDraggingCardId(cardId); // Renamed
+      setDraggedCardInfo({ cardId, sourceListId }); // Renamed
       event.dataTransfer.effectAllowed = "move";
     }
   };
   
 
-  const handleDragTaskEnd = () => {
-    setDraggingTaskId(null);
-    setDraggedTaskInfo(null);
+  const handleDragCardEnd = () => { // Renamed
+    setDraggingCardId(null); // Renamed
+    setDraggedCardInfo(null); // Renamed
     setDropIndicator(null);
   };
 
-  const handleDropTask = (event: React.DragEvent<HTMLDivElement>, currentTargetListId: string, currentTargetTaskId?: string) => {
+  const handleDropCard = (event: React.DragEvent<HTMLDivElement>, currentTargetListId: string, currentTargetCardId?: string) => { // Renamed
     event.preventDefault();
     event.stopPropagation();
-    if (!draggedTaskInfo) return; 
+    if (!draggedCardInfo) return; 
   
-    const { taskId: movedTaskId, sourceListId: currentSourceListId } = draggedTaskInfo;
+    const { cardId: movedCardId, sourceListId: currentSourceListId } = draggedCardInfo; // Renamed
   
     setBoard(prevBoard => {
       const newBoardState = { ...prevBoard };
       const newListsState = { ...newBoardState.lists };
-      const newTasksState = { ...newBoardState.tasks };
+      const newCardsState = { ...newBoardState.cards }; // Renamed
   
-      let sourceListTaskIdsCopy = [...newListsState[currentSourceListId].taskIds];
+      let sourceListCardIdsCopy = [...newListsState[currentSourceListId].cardIds]; // Renamed
       
-      // If moving within the same list, make a single modifiable copy
       if (currentSourceListId === currentTargetListId) {
-        const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
-        if (taskIndexInSource > -1) {
-          sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
+        const cardIndexInSource = sourceListCardIdsCopy.indexOf(movedCardId);
+        if (cardIndexInSource > -1) {
+          sourceListCardIdsCopy.splice(cardIndexInSource, 1);
         }
       } else {
-        // If moving to a different list, update source list
-        const taskIndexInSource = sourceListTaskIdsCopy.indexOf(movedTaskId);
-        if (taskIndexInSource > -1) {
-          sourceListTaskIdsCopy.splice(taskIndexInSource, 1);
+        const cardIndexInSource = sourceListCardIdsCopy.indexOf(movedCardId);
+        if (cardIndexInSource > -1) {
+          sourceListCardIdsCopy.splice(cardIndexInSource, 1);
         }
-        newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], taskIds: sourceListTaskIdsCopy };
+        newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], cardIds: sourceListCardIdsCopy }; // Renamed
       }
       
-      // Prepare target list (either the modified source, or a copy of a different target)
-      let finalTaskIdsForTargetList = (currentSourceListId === currentTargetListId)
-        ? sourceListTaskIdsCopy // Already modified if same list
-        : (newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].taskIds] : []);
+      let finalCardIdsForTargetList = (currentSourceListId === currentTargetListId)
+        ? sourceListCardIdsCopy
+        : (newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].cardIds] : []); // Renamed
 
-      // Remove task if it somehow exists in target (e.g., from a rapid, complex drag) - defensive
-      const taskIndexInTargetPreInsert = finalTaskIdsForTargetList.indexOf(movedTaskId);
-      if (taskIndexInTargetPreInsert > -1) {
-         finalTaskIdsForTargetList.splice(taskIndexInTargetPreInsert, 1);
+      const cardIndexInTargetPreInsert = finalCardIdsForTargetList.indexOf(movedCardId);
+      if (cardIndexInTargetPreInsert > -1) {
+         finalCardIdsForTargetList.splice(cardIndexInTargetPreInsert, 1);
       }
 
-      const insertAtIndex = currentTargetTaskId ? finalTaskIdsForTargetList.indexOf(currentTargetTaskId) : -1;
+      const insertAtIndex = currentTargetCardId ? finalCardIdsForTargetList.indexOf(currentTargetCardId) : -1;
       if (insertAtIndex > -1) {
-        finalTaskIdsForTargetList.splice(insertAtIndex, 0, movedTaskId);
+        finalCardIdsForTargetList.splice(insertAtIndex, 0, movedCardId);
       } else {
-        finalTaskIdsForTargetList.push(movedTaskId); 
+        finalCardIdsForTargetList.push(movedCardId); 
       }
-      newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], taskIds: finalTaskIdsForTargetList };
+      newListsState[currentTargetListId] = { ...newListsState[currentTargetListId], cardIds: finalCardIdsForTargetList }; // Renamed
       
       const affectedListIds = new Set([currentSourceListId, currentTargetListId]);
       affectedListIds.forEach(listId => {
         const list = newListsState[listId];
         if (list) {
-          list.taskIds.forEach((tId, index) => {
-            if (newTasksState[tId]) {
-              newTasksState[tId] = { ...newTasksState[tId], order: index };
+          list.cardIds.forEach((cId, index) => { // Renamed
+            if (newCardsState[cId]) {
+              newCardsState[cId] = { ...newCardsState[cId], order: index };
             }
           });
         }
       });
       
-      return { ...newBoardState, lists: newListsState, tasks: newTasksState };
+      return { ...newBoardState, lists: newListsState, cards: newCardsState }; // Renamed
     });
   
     setDropIndicator(null); 
   };
 
-  const handleTaskDragOverList = (event: React.DragEvent, targetListId: string, targetTaskId?: string | null) => {
+  const handleCardDragOverList = (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => { // Renamed
     event.preventDefault();
     event.stopPropagation();
-    if (draggingTaskId) {
-      setDropIndicator({ listId: targetListId, beforeTaskId: targetTaskId || null });
+    if (draggingCardId) { // Renamed
+      setDropIndicator({ listId: targetListId, beforeCardId: targetCardId || null }); // Renamed
       event.dataTransfer.dropEffect = "move";
     }
   };
@@ -337,8 +333,6 @@ export function KanbanBoard() {
         setDropTargetSwimlaneId("end-of-board");
     } else if (draggingListId) {
         // This case might be too broad, specific swimlane area drag over is better.
-        // Consider if this needs to set dropTargetListId to null or specific end-of-board for lists.
-        // For now, let swimlane area drag over handle list targets.
     }
     event.dataTransfer.dropEffect = "move";
   };
@@ -381,6 +375,7 @@ export function KanbanBoard() {
     });
 
     setDropTargetSwimlaneId(null);
+    setDraggingSwimlaneId(null); // Also reset draggingSwimlaneId here
   };
 
   const handleSwimlaneDragEnd = () => {
@@ -402,11 +397,10 @@ export function KanbanBoard() {
 
   const handleListDragOver = (event: React.DragEvent<HTMLDivElement>, targetListId: string) => {
     event.preventDefault(); 
-    event.stopPropagation(); // Important to stop propagation here
+    event.stopPropagation(); 
     if (draggingListId && draggingListId !== targetListId) {
       setDropTargetListId(targetListId); 
     } else if (draggingListId && draggingListId === targetListId) {
-      // Hovering over itself, clear specific target to allow "end-of-swimlane" if mouse moves there
       setDropTargetListId(null); 
     }
     event.dataTransfer.dropEffect = "move";
@@ -416,7 +410,6 @@ export function KanbanBoard() {
     event.preventDefault(); 
     event.stopPropagation();
     if (draggingListId) {
-      // Set target to end of the specific swimlane
       setDropTargetListId(`end-of-swimlane-${targetSwimlaneId}`);
     }
     event.dataTransfer.dropEffect = "move";
@@ -448,7 +441,6 @@ export function KanbanBoard() {
       if (indexInSource > -1) {
         sourceListIdsCopy.splice(indexInSource, 1);
       }
-
 
       if (sourceSwimlaneId === targetSwimlaneId) {
         targetListIdsEffectiveCopy = [...sourceListIdsCopy]; 
@@ -578,7 +570,7 @@ export function KanbanBoard() {
   };
 
 
-  const handleRankTasks = async () => {
+  const handleRankCards = async () => { // Renamed
     let todoListId: string | undefined;
     let todoList: ListType | undefined;
 
@@ -595,42 +587,42 @@ export function KanbanBoard() {
         if (todoList) break; 
     }
 
-    if (!todoList || !todoListId || todoList.taskIds.length === 0) {
-      toast({ title: "No Tasks to Rank", description: "Could not find a 'To Do' list with tasks." });
+    if (!todoList || !todoListId || todoList.cardIds.length === 0) { // Renamed
+      toast({ title: "No Cards to Rank", description: "Could not find a 'To Do' list with cards." });
       return;
     }
     const finalTodoListId = todoListId; 
 
     setIsRanking(true);
     try {
-      const tasksToRank: RankTasksInput["tasks"] = todoList.taskIds
-        .map(taskId => board.tasks[taskId])
-        .filter(task => task) 
-        .map(task => ({
-          id: task.id,
-          description: task.description || task.title, 
-          deadline: task.deadline,
+      const cardsToRank: RankCardsInput["cards"] = todoList.cardIds // Renamed
+        .map(cardId => board.cards[cardId]) // Renamed
+        .filter(card => card) 
+        .map(card => ({
+          id: card.id,
+          description: card.description || card.title, 
+          deadline: card.deadline,
         }));
 
-      if (tasksToRank.length === 0) {
-         toast({ title: "No Tasks to Rank", description: "No valid tasks found in 'To Do' list." });
+      if (cardsToRank.length === 0) {
+         toast({ title: "No Cards to Rank", description: "No valid cards found in 'To Do' list." });
          setIsRanking(false);
          return;
       }
 
-      const rankedResults = await rankTasks({ tasks: tasksToRank });
+      const rankedResults = await rankCards({ cards: cardsToRank }); // Renamed
 
       setBoard(prevBoard => {
         const newBoard = { ...prevBoard };
         const newLists = { ...newBoard.lists };
-        const newTasks = { ...newBoard.tasks };
+        const newCards = { ...newBoard.cards }; // Renamed
         const targetList = newLists[finalTodoListId]; 
         if (!targetList) return prevBoard; 
 
-        const currentTodoTaskIds = [...targetList.taskIds];
+        const currentTodoCardIds = [...targetList.cardIds]; // Renamed
         const rankMap = new Map(rankedResults.map(r => [r.id, r.rank]));
         
-        const newOrderedTaskIds = [...currentTodoTaskIds].sort((aId, bId) => {
+        const newOrderedCardIds = [...currentTodoCardIds].sort((aId, bId) => { // Renamed
             const rankA = rankMap.get(aId);
             const rankB = rankMap.get(bId);
             if (rankA !== undefined && rankB !== undefined) return rankA - rankB;
@@ -639,21 +631,21 @@ export function KanbanBoard() {
             return 0; 
         });
         
-        newLists[finalTodoListId] = { ...targetList, taskIds: newOrderedTaskIds };
+        newLists[finalTodoListId] = { ...targetList, cardIds: newOrderedCardIds }; // Renamed
         
-        newOrderedTaskIds.forEach((taskId, index) => {
-          if (newTasks[taskId]) {
-            newTasks[taskId] = { ...newTasks[taskId], order: index };
+        newOrderedCardIds.forEach((cardId, index) => { // Renamed
+          if (newCards[cardId]) {
+            newCards[cardId] = { ...newCards[cardId], order: index };
           }
         });
         
-        return { ...newBoard, lists: newLists, tasks: newTasks };
+        return { ...newBoard, lists: newLists, cards: newCards }; // Renamed
       });
 
-      toast({ title: "Tasks Ranked", description: `Tasks in "${todoList.title}" list have been reordered by AI.` });
+      toast({ title: "Cards Ranked", description: `Cards in "${todoList.title}" list have been reordered by AI.` });
     } catch (error) {
-      console.error("Error ranking tasks:", error);
-      toast({ variant: "destructive", title: "Ranking Failed", description: "Could not rank tasks. Please try again." });
+      console.error("Error ranking cards:", error);
+      toast({ variant: "destructive", title: "Ranking Failed", description: "Could not rank cards. Please try again." });
     } finally {
       setIsRanking(false);
     }
@@ -681,13 +673,13 @@ export function KanbanBoard() {
     toast({ title: "List color updated" });
   };
 
-  const handleSetTaskColor = (taskId: string, color: string) => {
+  const handleSetCardColor = (cardId: string, color: string) => { // Renamed
     setBoard(prevBoard => {
-      const newTasks = { ...prevBoard.tasks };
-      if (newTasks[taskId]) {
-         newTasks[taskId] = { ...newTasks[taskId], color };
+      const newCards = { ...prevBoard.cards }; // Renamed
+      if (newCards[cardId]) {
+         newCards[cardId] = { ...newCards[cardId], color };
       }
-      return { ...prevBoard, tasks: newTasks };
+      return { ...prevBoard, cards: newCards }; // Renamed
     });
     toast({ title: "Card color updated" });
   };
@@ -697,7 +689,7 @@ export function KanbanBoard() {
     <div className="flex flex-col h-full">
       <BoardHeader
         boardName={board.name}
-        onRankTasks={handleRankTasks}
+        onRankTasks={handleRankCards} // Renamed
         onShareBoard={() => setShareDialogOpen(true)}
         onAddSwimlane={handleAddSwimlaneToEnd} 
         isRanking={isRanking}
@@ -738,21 +730,21 @@ export function KanbanBoard() {
               <KanbanSwimlane
                 swimlane={swimlane}
                 lists={listsInSwimlane}
-                tasks={board.tasks}
-                onOpenCreateTaskForm={handleOpenCreateTaskForm}
+                cards={board.cards} // Renamed
+                onOpenCreateCardForm={handleOpenCreateCardForm} // Renamed
                 
-                onDropTask={handleDropTask}
-                onDragTaskStart={handleDragTaskStart}
-                onDragTaskEnd={handleDragTaskEnd}
-                draggingTaskId={draggingTaskId}
+                onDropCard={handleDropCard} // Renamed
+                onDragCardStart={handleDragCardStart} // Renamed
+                onDragCardEnd={handleDragCardEnd} // Renamed
+                draggingCardId={draggingCardId} // Renamed
                 dropIndicator={dropIndicator}
-                onTaskDragOverList={handleTaskDragOverList}
+                onCardDragOverList={handleCardDragOverList} // Renamed
 
                 onDeleteSwimlane={handleDeleteSwimlane}
                 onOpenCard={handleOpenCard}
                 onSetSwimlaneColor={handleSetSwimlaneColor}
                 onSetListColor={handleSetListColor}
-                onSetTaskColor={handleSetTaskColor}
+                onSetCardColor={handleSetCardColor} // Renamed
                 
                 onAddSwimlaneBelow={handleAddSwimlaneBelow}
                 onAddSwimlaneFromTemplate={handleAddSwimlaneFromTemplate}
@@ -788,10 +780,10 @@ export function KanbanBoard() {
             />
         )}
       </div>
-      <CreateTaskForm
-        isOpen={isCreateTaskFormOpen}
-        onOpenChange={setCreateTaskFormOpen}
-        onSubmit={handleCreateTask}
+      <CreateCardForm // Renamed
+        isOpen={isCreateCardFormOpen} // Renamed
+        onOpenChange={setCreateCardFormOpen} // Renamed
+        onSubmit={handleCreateCard} // Renamed
       />
       <ShareBoardDialog
         isOpen={isShareDialogOpen}

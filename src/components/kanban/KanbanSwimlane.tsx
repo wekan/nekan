@@ -1,8 +1,8 @@
 
 "use client";
 
-import type { Swimlane as SwimlaneType, List as ListType, Task } from "@/lib/types";
-import { KanbanList } from "./KanbanList"; // Changed from List to KanbanList
+import type { Swimlane as SwimlaneType, List as ListType, Card as CardType } from "@/lib/types"; // Updated CardType
+import { KanbanList } from "./KanbanList";
 import { Button } from "@/components/ui/button";
 import { Menu, Trash2, Palette, Plus } from "lucide-react";
 import {
@@ -25,22 +25,22 @@ import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 interface KanbanSwimlaneProps { 
   swimlane: SwimlaneType;
   lists: ListType[];
-  tasks: Record<string, Task>;
-  onOpenCreateTaskForm: (listId: string) => void;
+  cards: Record<string, CardType>; // Renamed from tasks
+  onOpenCreateCardForm: (listId: string) => void; // Renamed
   
-  onDropTask: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetTaskId?: string) => void;
-  onDragTaskStart: (event: React.DragEvent<HTMLDivElement>, taskId: string) => void;
-  onDragTaskEnd: (event: React.DragEvent<HTMLDivElement>) => void;
-  draggingTaskId: string | null;
-  dropIndicator: { listId: string; beforeTaskId: string | null } | null; 
-  onTaskDragOverList: (event: React.DragEvent, targetListId: string, targetTaskId?: string | null) => void; 
+  onDropCard: (event: React.DragEvent<HTMLDivElement>, targetListId: string, targetCardId?: string) => void; // Renamed
+  onDragCardStart: (event: React.DragEvent<HTMLDivElement>, cardId: string) => void; // Renamed
+  onDragCardEnd: (event: React.DragEvent<HTMLDivElement>) => void; // Renamed
+  draggingCardId: string | null; // Renamed
+  dropIndicator: { listId: string; beforeCardId: string | null } | null;  // Renamed beforeTaskId
+  onCardDragOverList: (event: React.DragEvent, targetListId: string, targetCardId?: string | null) => void; // Renamed
 
 
   onDeleteSwimlane: (swimlaneId: string) => void;
-  onOpenCard: (taskId: string) => void;
+  onOpenCard: (cardId: string) => void; // Renamed
   onSetSwimlaneColor: (swimlaneId: string, color: string) => void;
   onSetListColor: (listId: string, color: string) => void;
-  onSetTaskColor: (taskId: string, color: string) => void;
+  onSetCardColor: (cardId: string, color: string) => void; // Renamed
   
   onAddSwimlaneBelow: (name: string, referenceSwimlaneId: string) => void;
   onAddSwimlaneFromTemplate: (referenceSwimlaneId: string) => void;
@@ -63,21 +63,21 @@ interface KanbanSwimlaneProps {
 export function KanbanSwimlane({ 
   swimlane,
   lists,
-  tasks,
-  onOpenCreateTaskForm,
+  cards, // Renamed
+  onOpenCreateCardForm, // Renamed
   
-  onDropTask,
-  onDragTaskStart,
-  onDragTaskEnd,
-  draggingTaskId,
+  onDropCard, // Renamed
+  onDragCardStart, // Renamed
+  onDragCardEnd, // Renamed
+  draggingCardId, // Renamed
   dropIndicator,
-  onTaskDragOverList,
+  onCardDragOverList, // Renamed
 
   onDeleteSwimlane,
   onOpenCard,
   onSetSwimlaneColor,
   onSetListColor,
-  onSetTaskColor,
+  onSetCardColor, // Renamed
   onAddSwimlaneBelow,
   onAddSwimlaneFromTemplate,
   onSwimlaneDragStart,
@@ -134,7 +134,7 @@ export function KanbanSwimlane({
 
   const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
   
-  const listsToRender = lists.filter(l => l.id !== draggingListId);
+  const listsToRender = lists; // Do not filter out the dragged list here, handle opacity in KanbanList
 
   const swimlaneContentDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     if (onSwimlaneDragOver && draggingSwimlaneId && draggingSwimlaneId !== swimlane.id) {
@@ -232,10 +232,10 @@ export function KanbanSwimlane({
           onDrop={handleDropListOnSwimlaneArea}
         >
           {!isAnySwimlaneBeingDragged && listsToRender.map((list) => { 
-            const tasksInList = list.taskIds
-              .map(taskId => tasks[taskId])
+            const cardsInList = list.cardIds // Renamed from taskIds
+              .map(cardId => cards[cardId]) // Renamed from tasks
               .filter(Boolean)
-              .sort((a,b) => a.order - b.order) as Task[];
+              .sort((a,b) => a.order - b.order) as CardType[]; // Updated CardType
             
             const showListDropPlaceholderBeforeThis = draggingListId && 
                                                       dropTargetListId === list.id && 
@@ -250,7 +250,6 @@ export function KanbanSwimlane({
                         e.stopPropagation(); 
                         e.dataTransfer.dropEffect = "move";
                         if (draggingListId) {
-                           // When dragging over this placeholder, re-assert that the drop target is this list's position
                            onListDragOver(e, list.id); 
                         }
                     }}
@@ -267,19 +266,19 @@ export function KanbanSwimlane({
                   <KanbanList 
                     swimlaneId={swimlane.id}
                     list={list}
-                    tasks={tasksInList}
-                    onAddTask={onOpenCreateTaskForm}
+                    cards={cardsInList} // Renamed
+                    onAddCard={onOpenCreateCardForm} // Renamed
                     
-                    onDropTask={onDropTask}
-                    onDragTaskStart={onDragTaskStart} 
-                    onDragTaskEnd={onDragTaskEnd} 
-                    draggingTaskId={draggingTaskId}
+                    onDropCard={onDropCard} // Renamed
+                    onDragCardStart={onDragCardStart}  // Renamed
+                    onDragCardEnd={onDragCardEnd}  // Renamed
+                    draggingCardId={draggingCardId} // Renamed
                     dropIndicator={dropIndicator}
-                    onTaskDragOverList={onTaskDragOverList}
+                    onCardDragOverList={onCardDragOverList} // Renamed
 
                     onOpenCard={onOpenCard}
                     onSetListColor={onSetListColor}
-                    onSetTaskColor={onSetTaskColor}
+                    onSetCardColor={onSetCardColor} // Renamed
 
                     onListDragStart={onListDragStart}
                     onListDropOnList={onListDropOnList} 
@@ -324,5 +323,3 @@ export function KanbanSwimlane({
     </>
   );
 }
-
-  
