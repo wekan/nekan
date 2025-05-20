@@ -70,7 +70,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
           translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(paramValue));
         }
       });
-      
+
       // Replace %s style placeholders sequentially
       if (typeof params === 'object' && params !== null) {
         let paramIndex = 0;
@@ -85,10 +85,11 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   }, [currentTranslations]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
-      {children}
-    </LanguageContext.Provider>
+    <LanguageContext.Provider value= {{ language, setLanguage, t }}>
+  { children }
+  </LanguageContext.Provider>
   );
+)
 };
 
 export const useTranslation = (): LanguageContextType => {
