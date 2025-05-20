@@ -1,25 +1,21 @@
 
-// src/lib/i18n/index.ts
 'use client';
 
-import React, { ReactNode } from 'react'; // Explicitly import React and ReactNode
+import React, { ReactNode } from 'react';
 
-// Assuming enTranslations is the structure for all translations
 import enTranslations from './en.i18n.json';
 
-// For now, we only have English. In a real app, this would involve dynamic imports.
 const translations: Record<string, Record<string, string>> = {
   en: enTranslations,
-  // Other language translations would be added here if available
 };
 
 export type LanguageCode = keyof typeof translations;
 
-type LanguageContextType = {
+export interface LanguageContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
   t: (key: string, params?: Record<string, string | number | undefined>) => string;
-};
+}
 
 const LanguageContext = React.createContext<LanguageContextType | undefined>(undefined);
 
@@ -51,8 +47,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       }
       console.warn(`Translations for language "${lang}" not found. Falling back to English.`);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // setLanguageState and setCurrentTranslations from useState are stable
+  }, []); // setLanguageState and setCurrentTranslations are stable and don't need to be in deps
 
   React.useEffect(() => {
     const savedLang = (typeof window !== 'undefined' ? localStorage.getItem('kanbanai-lang') : 'en') as LanguageCode;
@@ -80,7 +75,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
         let paramIndex = 0;
         const paramKeys = Object.keys(params); 
         translation = translation.replace(/%s/g, () => {
-          const val = params[paramKeys[paramIndex++]];
+          const val = paramIndex < paramKeys.length ? params[paramKeys[paramIndex++]] : undefined;
           return val !== undefined ? String(val) : '%s';
         });
       }
@@ -88,8 +83,10 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     return translation;
   }, [currentTranslations]);
 
+  const providerValue = { language, setLanguage, t };
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={providerValue}>
       {children}
     </LanguageContext.Provider>
   );
