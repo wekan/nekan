@@ -45,28 +45,15 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('kanbanai-lang', lang);
       }
     } else {
-      // Fallback to English if the selected language's translations aren't found
       setLanguageState('en');
       setCurrentTranslations(translations.en);
       if (typeof window !== 'undefined') {
         localStorage.setItem('kanbanai-lang', 'en');
       }
-      console.warn(`Translations for language "${lang}" not found. Falling back to English.`);
+      console.warn("Translations for language \"" + lang + "\" not found. Falling back to English.");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // setLanguageState and setCurrentTranslations are stable
-
-  // Effect to update translations if the language changes externally (e.g., localStorage initialization)
-  React.useEffect(() => {
-    const savedLang = (typeof window !== 'undefined' ? localStorage.getItem('kanbanai-lang') : 'en') as LanguageCode;
-    if (savedLang && translations[savedLang]) {
-      if (language !== savedLang) { // Only update if different
-        setLanguage(savedLang);
-      }
-    } else if (language !== 'en') { // If invalid saved lang, fallback to 'en'
-        setLanguage('en');
-    }
-  }, [language, setLanguage]);
 
   const t = React.useCallback((key: string, params?: Record<string, string | number | undefined>): string => {
     let translation = currentTranslations[key] || key; // Fallback to key if translation not found
@@ -94,10 +81,8 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     return translation;
   }, [currentTranslations]);
 
-  const providerValue = { language, setLanguage, t };
-
   return (
-    <LanguageContext.Provider value={providerValue}>
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -110,3 +95,4 @@ export const useTranslation = (): LanguageContextType => {
   }
   return context;
 };
+
