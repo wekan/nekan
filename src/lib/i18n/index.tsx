@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
@@ -84,12 +83,13 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     return translation;
   }, [currentTranslations]);
 
+  const providerValue = { language, setLanguage, t };
+
   return (
-    <LanguageContext.Provider value= {{ language, setLanguage, t }}>
-  { children }
-  </LanguageContext.Provider>
+    <LanguageContext.Provider value={providerValue}>
+      {children}
+    </LanguageContext.Provider>
   );
-)
 };
 
 export const useTranslation = (): LanguageContextType => {
