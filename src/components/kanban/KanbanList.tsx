@@ -74,10 +74,50 @@ export function KanbanList({
   const listStyle = list.color ? { backgroundColor: list.color } : {};
   const listRef = useRef<HTMLDivElement>(null);
 
-  const textColorClass = list.color && !isColorLight(list.color) ? "text-white" : "text-foreground";
-  const mutedTextColorClass = list.color && !isColorLight(list.color) ? "text-gray-300" : "text-muted-foreground";
-  const iconColorClass = list.color && !isColorLight(list.color) ? "text-white" : ""; // Default icon color will be inherited or explicitly set by Button variant
-  const buttonTextColorClass = list.color && !isColorLight(list.color) ? "text-white hover:text-white/90" : "";
+  const isListDark = list.color && !isColorLight(list.color);
+
+  // Text and icon colors for list header and general elements
+  const headerTextColorClass = isListDark ? "text-white" : "text-foreground";
+  const headerMutedTextColorClass = isListDark ? "text-gray-300" : "text-muted-foreground";
+  const headerIconColorClass = isListDark ? "text-white" : ""; // For icons like Menu, Palette
+
+  // Dropdown menu item colors
+  const dropdownDestructiveTextColor = isListDark ? "text-red-300 focus:text-red-300" : "text-destructive focus:text-destructive focus:bg-destructive/10";
+  const dropdownDestructiveIconColor = isListDark ? "text-red-300" : "text-destructive";
+  
+  // Border and separator colors
+  const divBorderClass = list.color ? (isListDark ? "border-gray-700" : "border-gray-300") : "border-border";
+  const separatorBgClass = list.color ? (isListDark ? "bg-gray-700" : "bg-gray-300") : "";
+
+  // Empty list placeholder styling
+  const emptyListClasses = cn(
+    "flex-1 min-h-[100px] flex items-center justify-center opacity-75 rounded border border-dashed",
+    list.color 
+      ? (isListDark ? "text-gray-400 border-gray-600/50" : "text-gray-600 border-gray-400/50")
+      : "text-muted-foreground border-muted-foreground/30"
+  );
+
+  // "Add Card" Button styling
+  const addCardButtonClasses = cn(
+    "w-full",
+    isListDark ? [
+      "text-white",
+      "border-white/70",
+      "hover:bg-white/10",
+      "hover:border-white",
+      "focus-visible:ring-white/50",
+      "bg-transparent" // Crucial for dark backgrounds
+    ] : [
+      "text-foreground", // Changed from text-primary
+      "hover:text-foreground/90", // Adjusted hover to match
+      "border-input"
+    ]
+  );
+
+  const addCardPlusIconClasses = cn(
+    "mr-2 h-4 w-4",
+    isListDark ? "text-white" : "text-foreground" // Changed from text-primary
+  );
 
   const handleColorChange = (color: ColorResult) => {
     onSetListColor(list.id, color.hex);
@@ -117,9 +157,9 @@ export function KanbanList({
           }
         }}
       >
-        <div className={cn("p-3 border-b flex items-center justify-between", list.color ? (isColorLight(list.color) ? "border-gray-300" : "border-gray-700") : "border-border")}>
+        <div className={cn("p-3 border-b flex items-center justify-between", divBorderClass)}>
           <div 
-            className={cn("flex items-center gap-1 flex-1 min-w-0 cursor-grab", textColorClass)}
+            className={cn("flex items-center gap-1 flex-1 min-w-0 cursor-grab", headerTextColorClass)}
             draggable 
             onDragStart={(e) => { 
                 e.stopPropagation();
@@ -129,19 +169,19 @@ export function KanbanList({
             aria-label={t('dragListAriaLabel', { listTitle: list.title })}
             data-no-card-click="true" 
           >
-            <h3 className={cn("font-semibold text-lg truncate", textColorClass)}>{list.title} <span className={cn("text-sm", mutedTextColorClass)}>({cards.length})</span></h3>
+            <h3 className={cn("font-semibold text-lg truncate", headerTextColorClass)}>{list.title} <span className={cn("text-sm", headerMutedTextColorClass)}>({cards.length})</span></h3>
           </div>
           <div className="shrink-0" data-no-card-click="true">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className={cn("h-7 w-7", iconColorClass)}>
-                  <Menu className={cn("h-4 w-4", iconColorClass)} /> 
+                <Button variant="ghost" size="icon" className={cn("h-7 w-7", headerIconColorClass)}>
+                  <Menu className={cn("h-4 w-4", headerIconColorClass)} /> 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className={iconColorClass}>
-                    <Palette className={cn("mr-2 h-4 w-4", iconColorClass)} />
+                  <DropdownMenuSubTrigger className={headerIconColorClass}>
+                    <Palette className={cn("mr-2 h-4 w-4", headerIconColorClass)} />
                     {t('setListColorPopup-title')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -158,12 +198,12 @@ export function KanbanList({
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
-                <DropdownMenuSeparator className={list.color ? (isColorLight(list.color) ? "bg-gray-300" : "bg-gray-700") : ""} />
+                <DropdownMenuSeparator className={separatorBgClass} />
                 <DropdownMenuItem 
                     onClick={() => alert(t('delete') + ` ${list.title} (` + t('not-implemented') + `)`)} 
-                    className={cn("text-destructive focus:text-destructive focus:bg-destructive/10", list.color && !isColorLight(list.color) ? "text-red-300 focus:text-red-300" : "")}
+                    className={cn("focus:bg-destructive/10", dropdownDestructiveTextColor)}
                 >
-                  <Trash2 className={cn("mr-2 h-4 w-4", list.color && !isColorLight(list.color) ? "text-red-300" : "text-destructive")} />
+                  <Trash2 className={cn("mr-2 h-4 w-4", dropdownDestructiveIconColor)} />
                   {t('listDeletePopup-title')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -194,10 +234,7 @@ export function KanbanList({
           )}
           {cards.length === 0 && !draggingCardId && (
              <div 
-              className={cn("flex-1 min-h-[100px] flex items-center justify-center opacity-75 rounded border border-dashed", 
-                list.color ? (isColorLight(list.color) ? "text-gray-600 border-gray-400/50" : "text-gray-400 border-gray-600/50") 
-                           : "text-muted-foreground border-muted-foreground/30"
-              )}
+              className={emptyListClasses}
             >
               {t('dropCardsOrAddNewPlaceholder')}
             </div>
@@ -241,13 +278,13 @@ export function KanbanList({
             />
           )}
         </ScrollArea>
-        <div className={cn("p-3 border-t", list.color ? (isColorLight(list.color) ? "border-gray-300" : "border-gray-700") : "border-border")}>
+        <div className={cn("p-3 border-t", divBorderClass)}>
           <Button 
             variant="outline" 
-            className={cn("w-full", buttonTextColorClass, list.color ? (isColorLight(list.color) ? "border-gray-400 hover:bg-gray-200/50" : "border-gray-600 hover:bg-gray-700/50") : "")}
+            className={addCardButtonClasses}
             onClick={() => onAddCard(list.id)}
           >
-            <Plus className={cn("mr-2 h-4 w-4", buttonTextColorClass)} /> {t('add-card')}
+            <Plus className={addCardPlusIconClasses} /> {t('add-card')}
           </Button>
         </div>
       </div>
