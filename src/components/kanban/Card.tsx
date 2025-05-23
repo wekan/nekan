@@ -17,7 +17,7 @@ import {
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { SketchPicker, ColorResult } from 'react-color';
-import { cn } from "@/lib/utils";
+import { cn, isColorLight } from "@/lib/utils"; // Import isColorLight
 import { useTranslation } from "@/lib/i18n";
 
 interface CardProps {
@@ -57,6 +57,9 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
   };
 
   const cardStyle = card.color ? { backgroundColor: card.color } : {};
+  const textColorClass = card.color && !isColorLight(card.color) ? "text-white" : "text-black";
+  const iconColorClass = card.color && !isColorLight(card.color) ? "text-white group-hover/card:text-white" : "text-muted-foreground group-hover/card:text-foreground";
+  const deadlineIconColorClass = card.color && !isColorLight(card.color) ? "text-white" : "text-muted-foreground";
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
@@ -84,7 +87,7 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
         className={cn(
           "mb-2 p-3 shadow-md hover:shadow-lg transition-shadow group/card", 
           isDragging ? "opacity-50 ring-2 ring-primary scale-105" : "",
-          "bg-card"
+          "bg-card" // Keep bg-card for default, cardStyle will override if color is set
         )}
       >
         <CardHeader className="p-0 mb-2 flex flex-row items-center justify-between gap-2">
@@ -95,10 +98,10 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
             }}
             onDragEnd={onDragEnd}
             onClick={handleTitleClick}
-            className="flex-1 min-w-0 cursor-grab group-hover/card:opacity-100 transition-opacity"
+            className={cn("flex-1 min-w-0 cursor-grab group-hover/card:opacity-100 transition-opacity", textColorClass)}
             aria-label={t('dragCardAriaLabel', { cardTitle: card.title })}
           >
-            <CardTitle className="text-base font-semibold break-words">
+            <CardTitle className={cn("text-base font-semibold break-words", textColorClass)}>
               {card.title}
             </CardTitle>
           </div>
@@ -106,14 +109,14 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
           <div className="shrink-0" data-no-card-click="true">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7 opacity-70 group-hover/card:opacity-100 transition-opacity">
-                  <Menu className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className={cn("h-7 w-7 opacity-70 group-hover/card:opacity-100 transition-opacity", iconColorClass)}>
+                  <Menu className={cn("h-4 w-4", iconColorClass)} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Palette className="mr-2 h-4 w-4" />
+                  <DropdownMenuSubTrigger className={iconColorClass}>
+                    <Palette className={cn("mr-2 h-4 w-4", iconColorClass)} />
                     {t('setCardColorPopup-title')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -135,8 +138,11 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
                 {onDeleteCard && (
                   <>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => onDeleteCard(card.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                      <Trash2 className="mr-2 h-4 w-4" />
+                    <DropdownMenuItem 
+                        onClick={() => onDeleteCard(card.id)} 
+                        className={cn("text-destructive focus:text-destructive focus:bg-destructive/10", card.color && !isColorLight(card.color) ? "text-red-300 focus:text-red-300" : "")}
+                    >
+                      <Trash2 className={cn("mr-2 h-4 w-4", card.color && !isColorLight(card.color) ? "text-red-300" : "text-destructive")} />
                       {t('cardDeletePopup-title')}
                     </DropdownMenuItem>
                   </>
@@ -147,12 +153,12 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
         </CardHeader>
         {card.description && (
           <CardContent className="p-0 mb-2" onClick={handleCardClick} style={{cursor: 'pointer'}}>
-            <p className="text-sm text-muted-foreground break-words">{card.description}</p>
+            <p className={cn("text-sm break-words", card.color && !isColorLight(card.color) ? "text-gray-200" : "text-muted-foreground")}>{card.description}</p>
           </CardContent>
         )}
         {displayDeadline && (
-          <div className="flex items-center text-xs text-muted-foreground mt-1" onClick={handleCardClick} style={{cursor: 'pointer'}}>
-            <CalendarDays className="h-3.5 w-3.5 mr-1.5" />
+          <div className={cn("flex items-center text-xs mt-1", card.color && !isColorLight(card.color) ? "text-gray-200" : "text-muted-foreground")} onClick={handleCardClick} style={{cursor: 'pointer'}}>
+            <CalendarDays className={cn("h-3.5 w-3.5 mr-1.5", deadlineIconColorClass)} />
             <span>{displayDeadline}</span>
           </div>
         )}

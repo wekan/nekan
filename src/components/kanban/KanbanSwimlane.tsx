@@ -22,8 +22,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import React, { useState } from 'react';
-import { cn } from "@/lib/utils";
+import React, { useState, MouseEvent } from 'react'; // Added MouseEvent
+import { cn, isColorLight } from "@/lib/utils"; // Import isColorLight
 import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 import { useTranslation } from "@/lib/i18n";
 
@@ -102,6 +102,9 @@ export function KanbanSwimlane({
   const swimlaneStyle = swimlane.color ? { backgroundColor: swimlane.color } : {};
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
+  const textColorClass = swimlane.color && !isColorLight(swimlane.color) ? "text-white" : "text-foreground";
+  const iconColorClass = swimlane.color && !isColorLight(swimlane.color) ? "text-white" : ""; // Default icon color will be inherited or explicitly set by Button variant
+
   const isCurrentlyDraggingThisSwimlane = draggingSwimlaneId === swimlane.id;
   const isAnySwimlaneBeingDragged = !!draggingSwimlaneId;
 
@@ -149,8 +152,9 @@ export function KanbanSwimlane({
     <>
       <div 
         className={cn(
-          "flex flex-col p-4 rounded-lg shadow-md border transition-all duration-300 ease-in-out",
-          isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : "border-border",
+          "flex flex-col p-4 rounded-lg shadow-md transition-all duration-300 ease-in-out",
+          isCurrentlyDraggingThisSwimlane ? "opacity-50 ring-2 ring-primary" : 
+          swimlane.color ? (isColorLight(swimlane.color) ? "border-gray-300" : "border-gray-700") : "border-border"
         )}
         style={swimlaneStyle}
         onDragOver={swimlaneContentDragOver}
@@ -160,8 +164,8 @@ export function KanbanSwimlane({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" onClick={() => setAddDialogOpen(true)} data-no-card-click="true" className="h-7 w-7">
-                    <Plus className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" onClick={() => setAddDialogOpen(true)} data-no-card-click="true" className={cn("h-7 w-7", iconColorClass)}>
+                    <Plus className={cn("h-5 w-5", iconColorClass)} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -172,14 +176,14 @@ export function KanbanSwimlane({
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" data-no-card-click="true" className="h-7 w-7">
-                  <Menu className="h-5 w-5" />
+                <Button variant="ghost" size="icon" data-no-card-click="true" className={cn("h-7 w-7", iconColorClass)}>
+                  <Menu className={cn("h-5 w-5", iconColorClass)} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Palette className="mr-2 h-4 w-4" />
+                  <DropdownMenuSubTrigger className={iconColorClass}>
+                    <Palette className={cn("mr-2 h-4 w-4", iconColorClass)} />
                     {t('setSwimlaneColorPopup-title')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -187,8 +191,7 @@ export function KanbanSwimlane({
                       sideOffset={8} 
                       alignOffset={-5} 
                       className="p-0 border-none bg-transparent shadow-none w-auto"
-                      onOpenAutoFocus={(e) => e.preventDefault()}
-                      onClick={(e) => e.stopPropagation()} 
+                      onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                     >
                       <SketchPicker
                         color={swimlane.color || '#FFFFFF'}
@@ -197,9 +200,12 @@ export function KanbanSwimlane({
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onDeleteSwimlane(swimlane.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <DropdownMenuSeparator className={swimlane.color ? (isColorLight(swimlane.color) ? "bg-gray-300" : "bg-gray-700") : ""}/>
+                <DropdownMenuItem 
+                    onClick={() => onDeleteSwimlane(swimlane.id)} 
+                    className={cn("text-destructive focus:text-destructive focus:bg-destructive/10", swimlane.color && !isColorLight(swimlane.color) ? "text-red-300 focus:text-red-300" : "")}
+                >
+                  <Trash2 className={cn("mr-2 h-4 w-4", swimlane.color && !isColorLight(swimlane.color) ? "text-red-300" : "text-destructive")} />
                   {t('swimlaneDeletePopup-title')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -224,9 +230,9 @@ export function KanbanSwimlane({
             onDragEnd={onSwimlaneDragEnd}
             aria-label={t('dragSwimlaneAriaLabel', { swimlaneName: swimlane.name })}
             data-no-card-click="true"
-            className="flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab"
+            className={cn("flex items-center gap-2 flex-1 min-w-0 px-2 cursor-grab", textColorClass)}
           >
-            <h2 className="text-xl font-semibold text-foreground truncate">
+            <h2 className={cn("text-xl font-semibold truncate", textColorClass)}>
                 {swimlane.name}
             </h2>
           </div>
@@ -291,7 +297,6 @@ export function KanbanSwimlane({
 
                     onListDragStart={onListDragStart}
                     onListDropOnList={onListDropOnList} 
-                    onListDropOnSwimlaneArea={onListDropOnSwimlaneArea} 
                     onListDragEnd={onListDragEnd}
                     draggingListId={draggingListId}
                     dropTargetListId={dropTargetListId} 

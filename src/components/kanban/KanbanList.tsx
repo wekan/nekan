@@ -17,8 +17,8 @@ import {
   DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import { SketchPicker, ColorResult } from 'react-color';
-import React, { useRef } from 'react';
-import { cn } from "@/lib/utils";
+import React, { useRef, MouseEvent } from 'react';
+import { cn, isColorLight } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 interface KanbanListProps {
@@ -74,6 +74,11 @@ export function KanbanList({
   const listStyle = list.color ? { backgroundColor: list.color } : {};
   const listRef = useRef<HTMLDivElement>(null);
 
+  const textColorClass = list.color && !isColorLight(list.color) ? "text-white" : "text-foreground";
+  const mutedTextColorClass = list.color && !isColorLight(list.color) ? "text-gray-300" : "text-muted-foreground";
+  const iconColorClass = list.color && !isColorLight(list.color) ? "text-white" : ""; // Default icon color will be inherited or explicitly set by Button variant
+  const buttonTextColorClass = list.color && !isColorLight(list.color) ? "text-white hover:text-white/90" : "";
+
   const handleColorChange = (color: ColorResult) => {
     onSetListColor(list.id, color.hex);
   };
@@ -87,8 +92,9 @@ export function KanbanList({
       <div
         ref={listRef}
         className={cn(
-          "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full relative",
-          draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : ""
+          "flex flex-col w-80 min-w-80 rounded-lg shadow-sm h-full relative",
+          draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : "",
+          list.color ? "" : "bg-muted/60" // Apply default bg only if no color is set
         )}
         style={listStyle}
         onDragOver={(e) => {
@@ -111,9 +117,9 @@ export function KanbanList({
           }
         }}
       >
-        <div className="p-3 border-b border-border flex items-center justify-between">
+        <div className={cn("p-3 border-b flex items-center justify-between", list.color ? (isColorLight(list.color) ? "border-gray-300" : "border-gray-700") : "border-border")}>
           <div 
-            className="flex items-center gap-1 flex-1 min-w-0 cursor-grab"
+            className={cn("flex items-center gap-1 flex-1 min-w-0 cursor-grab", textColorClass)}
             draggable 
             onDragStart={(e) => { 
                 e.stopPropagation();
@@ -123,19 +129,19 @@ export function KanbanList({
             aria-label={t('dragListAriaLabel', { listTitle: list.title })}
             data-no-card-click="true" 
           >
-            <h3 className="font-semibold text-lg text-foreground truncate">{list.title} <span className="text-sm text-muted-foreground">({cards.length})</span></h3>
+            <h3 className={cn("font-semibold text-lg truncate", textColorClass)}>{list.title} <span className={cn("text-sm", mutedTextColorClass)}>({cards.length})</span></h3>
           </div>
           <div className="shrink-0" data-no-card-click="true">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-7 w-7">
-                  <Menu className="h-4 w-4" /> 
+                <Button variant="ghost" size="icon" className={cn("h-7 w-7", iconColorClass)}>
+                  <Menu className={cn("h-4 w-4", iconColorClass)} /> 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Palette className="mr-2 h-4 w-4" />
+                  <DropdownMenuSubTrigger className={iconColorClass}>
+                    <Palette className={cn("mr-2 h-4 w-4", iconColorClass)} />
                     {t('setListColorPopup-title')}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
@@ -143,8 +149,7 @@ export function KanbanList({
                       sideOffset={8} 
                       alignOffset={-5} 
                       className="p-0 border-none bg-transparent shadow-none w-auto"
-                      onOpenAutoFocus={(e) => e.preventDefault()}
-                      onClick={(e) => e.stopPropagation()} 
+                      onClick={(e: MouseEvent<HTMLDivElement>) => e.stopPropagation()}
                     >
                       <SketchPicker
                         color={list.color || '#FFFFFF'}
@@ -153,9 +158,12 @@ export function KanbanList({
                     </DropdownMenuSubContent>
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => alert(t('delete') + ` ${list.title} (` + t('not-implemented') + `)`)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
-                  <Trash2 className="mr-2 h-4 w-4" />
+                <DropdownMenuSeparator className={list.color ? (isColorLight(list.color) ? "bg-gray-300" : "bg-gray-700") : ""} />
+                <DropdownMenuItem 
+                    onClick={() => alert(t('delete') + ` ${list.title} (` + t('not-implemented') + `)`)} 
+                    className={cn("text-destructive focus:text-destructive focus:bg-destructive/10", list.color && !isColorLight(list.color) ? "text-red-300 focus:text-red-300" : "")}
+                >
+                  <Trash2 className={cn("mr-2 h-4 w-4", list.color && !isColorLight(list.color) ? "text-red-300" : "text-destructive")} />
                   {t('listDeletePopup-title')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -186,7 +194,10 @@ export function KanbanList({
           )}
           {cards.length === 0 && !draggingCardId && (
              <div 
-              className="flex-1 min-h-[100px] flex items-center justify-center text-muted-foreground opacity-75 rounded border border-dashed border-muted-foreground/30"
+              className={cn("flex-1 min-h-[100px] flex items-center justify-center opacity-75 rounded border border-dashed", 
+                list.color ? (isColorLight(list.color) ? "text-gray-600 border-gray-400/50" : "text-gray-400 border-gray-600/50") 
+                           : "text-muted-foreground border-muted-foreground/30"
+              )}
             >
               {t('dropCardsOrAddNewPlaceholder')}
             </div>
@@ -230,9 +241,13 @@ export function KanbanList({
             />
           )}
         </ScrollArea>
-        <div className="p-3 border-t border-border">
-          <Button variant="outline" className="w-full" onClick={() => onAddCard(list.id)}>
-            <Plus className="mr-2 h-4 w-4" /> {t('add-card')}
+        <div className={cn("p-3 border-t", list.color ? (isColorLight(list.color) ? "border-gray-300" : "border-gray-700") : "border-border")}>
+          <Button 
+            variant="outline" 
+            className={cn("w-full", buttonTextColorClass, list.color ? (isColorLight(list.color) ? "border-gray-400 hover:bg-gray-200/50" : "border-gray-600 hover:bg-gray-700/50") : "")}
+            onClick={() => onAddCard(list.id)}
+          >
+            <Plus className={cn("mr-2 h-4 w-4", buttonTextColorClass)} /> {t('add-card')}
           </Button>
         </div>
       </div>
