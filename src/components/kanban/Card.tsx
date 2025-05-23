@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react"; // Removed useRef
 import type { Card as CardType } from "@/lib/types";
 import { Card as ShadCard, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+import { SketchPicker, ColorResult } from 'react-color';
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
@@ -27,7 +32,6 @@ interface CardProps {
 
 export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onSetCardColor, onDeleteCard }: CardProps) {
   const [displayDeadline, setDisplayDeadline] = useState<string | undefined>(undefined);
-  const colorInputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
@@ -48,12 +52,8 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
   }, [card.deadline]);
 
 
-  const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onSetCardColor(card.id, event.target.value);
-  };
-
-  const triggerColorInput = () => {
-    colorInputRef.current?.click();
+  const handleColorChange = (color: ColorResult) => {
+    onSetCardColor(card.id, color.hex);
   };
 
   const cardStyle = card.color ? { backgroundColor: card.color } : {};
@@ -68,7 +68,7 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
   };
   
   const handleTitleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) { // Prevent if click on menu trigger
+     if ((e.target as HTMLElement).closest('[data-no-card-click="true"]')) {
       return;
     }
     if (!isDragging ) { 
@@ -79,14 +79,6 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
 
   return (
     <>
-      <input
-        type="color"
-        ref={colorInputRef}
-        style={{ display: 'none' }}
-        value={card.color || '#FFFFFF'}
-        onChange={handleColorInputChange}
-        data-no-card-click="true"
-      />
       <ShadCard
         style={cardStyle}
         className={cn(
@@ -119,10 +111,27 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
-                  <Palette className="mr-2 h-4 w-4" />
-                  {t('setCardColorPopup-title')}
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette className="mr-2 h-4 w-4" />
+                    {t('setCardColorPopup-title')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent 
+                      sideOffset={8} 
+                      alignOffset={-5} 
+                      className="p-0 border-none bg-transparent shadow-none w-auto"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()} 
+                    >
+                      <SketchPicker
+                        color={card.color || '#FFFFFF'}
+                        onChangeComplete={handleColorChange}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+
                 {onDeleteCard && (
                   <>
                     <DropdownMenuSeparator />

@@ -10,14 +10,19 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+import { SketchPicker, ColorResult } from 'react-color';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { cn } from "@/lib/utils";
 import { AddSwimlaneDialog } from "./AddSwimlaneDialog";
 import { useTranslation } from "@/lib/i18n";
@@ -95,18 +100,13 @@ export function KanbanSwimlane({
 }: KanbanSwimlaneProps) {
   const { t } = useTranslation();
   const swimlaneStyle = swimlane.color ? { backgroundColor: swimlane.color } : {};
-  const colorInputRef = useRef<HTMLInputElement>(null);
   const [isAddDialogOpen, setAddDialogOpen] = useState(false);
 
   const isCurrentlyDraggingThisSwimlane = draggingSwimlaneId === swimlane.id;
   const isAnySwimlaneBeingDragged = !!draggingSwimlaneId;
 
-  const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onSetSwimlaneColor(swimlane.id, event.target.value);
-  };
-
-  const triggerColorInput = () => {
-    colorInputRef.current?.click();
+  const handleColorChange = (color: ColorResult) => {
+    onSetSwimlaneColor(swimlane.id, color.hex);
   };
   
   const handleDragOverListArea = (event: React.DragEvent<HTMLDivElement>) => {
@@ -147,14 +147,6 @@ export function KanbanSwimlane({
 
   return (
     <>
-      <input
-        type="color"
-        ref={colorInputRef}
-        style={{ display: 'none' }}
-        value={swimlane.color || '#FFFFFF'}
-        onChange={handleColorInputChange}
-        data-no-card-click="true"
-      />
       <div 
         className={cn(
           "flex flex-col p-4 rounded-lg shadow-md border transition-all duration-300 ease-in-out",
@@ -185,10 +177,26 @@ export function KanbanSwimlane({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
-                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); triggerColorInput(); }}>
-                  <Palette className="mr-2 h-4 w-4" />
-                  {t('setSwimlaneColorPopup-title')}
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette className="mr-2 h-4 w-4" />
+                    {t('setSwimlaneColorPopup-title')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent 
+                      sideOffset={8} 
+                      alignOffset={-5} 
+                      className="p-0 border-none bg-transparent shadow-none w-auto"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()} 
+                    >
+                      <SketchPicker
+                        color={swimlane.color || '#FFFFFF'}
+                        onChangeComplete={handleColorChange}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onDeleteSwimlane(swimlane.id)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                   <Trash2 className="mr-2 h-4 w-4" />

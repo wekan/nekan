@@ -11,7 +11,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
+import { SketchPicker, ColorResult } from 'react-color';
 import React, { useRef } from 'react';
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
@@ -59,7 +64,7 @@ export function KanbanList({
   onSetCardColor,
 
   onListDragStart,
-  onListDropOnList, // Used by placeholders in parent
+  onListDropOnList, 
   onListDragEnd,
   draggingListId,
   dropTargetListId, 
@@ -67,15 +72,10 @@ export function KanbanList({
 }: KanbanListProps) {
   const { t } = useTranslation();
   const listStyle = list.color ? { backgroundColor: list.color } : {};
-  const colorInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const handleColorInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    onSetListColor(list.id, event.target.value);
-  };
-
-  const triggerColorInput = () => {
-    colorInputRef.current?.click();
+  const handleColorChange = (color: ColorResult) => {
+    onSetListColor(list.id, color.hex);
   };
 
   const isPlaceholderActiveBeforeThisList = draggingListId && 
@@ -84,20 +84,11 @@ export function KanbanList({
 
   return (
     <>
-      <input
-        type="color"
-        ref={colorInputRef}
-        style={{ display: 'none' }}
-        value={list.color || '#FFFFFF'}
-        onChange={handleColorInputChange}
-        data-no-card-click="true"
-      />
       <div
         ref={listRef}
         className={cn(
           "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full relative",
           draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : ""
-          // Placeholder styling is now primarily handled by parent KanbanSwimlane
         )}
         style={listStyle}
         onDragOver={(e) => {
@@ -109,7 +100,6 @@ export function KanbanList({
                 onListDragOver(e, list.id); 
               } else { // Hovering on the right half, let parent (swimlane area) handle
                 e.preventDefault(); 
-                // No onListDragOver means event might bubble to swimlane area for "end-of-swimlane" drop
               }
             } else {
               onListDragOver(e, list.id); // Fallback if ref not available
@@ -143,10 +133,26 @@ export function KanbanList({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={(e)=>{ e.preventDefault(); triggerColorInput();}}>
-                  <Palette className="mr-2 h-4 w-4" />
-                  {t('setListColorPopup-title')}
-                </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Palette className="mr-2 h-4 w-4" />
+                    {t('setListColorPopup-title')}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent 
+                      sideOffset={8} 
+                      alignOffset={-5} 
+                      className="p-0 border-none bg-transparent shadow-none w-auto"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()} 
+                    >
+                      <SketchPicker
+                        color={list.color || '#FFFFFF'}
+                        onChangeComplete={handleColorChange}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => alert(t('delete') + ` ${list.title} (` + t('not-implemented') + `)`)} className="text-destructive focus:text-destructive focus:bg-destructive/10">
                   <Trash2 className="mr-2 h-4 w-4" />
