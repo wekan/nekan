@@ -7,6 +7,9 @@ export async function GET(
   request: Request,
   { params }: { params: { lang: string } }
 ) {
+  // The params object itself doesn't need to be awaited here.
+  // The error message might be a bit misleading in this context for route handlers.
+  // Accessing params.lang directly is standard practice in Next.js App Router route handlers.
   const lang = params.lang;
   try {
     // Construct the path to the locale file in the public directory

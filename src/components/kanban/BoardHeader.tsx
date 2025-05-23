@@ -98,7 +98,7 @@ export function BoardHeader({ boardName, onRankCards, onShareBoard, isRanking }:
                             onSelect={() => handleSelectLanguage(lang.name, lang.tag, lang.code as LanguageCode)}
                             disabled={lang.code === currentLanguage}
                           >
-                            {lang.name} ({lang.tag})
+                            {lang.name} ({lang.tag}) {lang.rtl && "(RTL)"}
                           </DropdownMenuItem>
                         ))}
                       </ScrollArea>

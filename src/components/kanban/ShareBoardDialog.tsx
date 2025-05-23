@@ -51,7 +51,7 @@ export function ShareBoardDialog({ isOpen, onOpenChange, boardName }: ShareBoard
       <DialogContent className="sm:max-w-[480px] bg-background">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-            <Users className="mr-2 h-5 w-5" /> {t('shareBoardDialogTitle', { boardName })}
+            <Users className="me-2 h-5 w-5" /> {t('shareBoardDialogTitle', { boardName })}
           </DialogTitle>
           <DialogDescription>
             {t('shareBoardDialogDescription')}
@@ -60,7 +60,7 @@ export function ShareBoardDialog({ isOpen, onOpenChange, boardName }: ShareBoard
         <div className="space-y-4 py-2">
           <div className="space-y-2">
             <Label htmlFor="email">{t('email-addresses')}</Label>
-            <div className="flex space-x-2">
+            <div className="flex space-x-2 rtl:space-x-reverse">
               <Input
                 id="email"
                 type="email"
@@ -69,7 +69,7 @@ export function ShareBoardDialog({ isOpen, onOpenChange, boardName }: ShareBoard
                 onChange={(e) => setEmail(e.target.value)}
               />
               <Button onClick={handleAddUser} className="shrink-0">
-                <UserPlus className="mr-2 h-4 w-4" /> {t('addUserButton')}
+                <UserPlus className="me-2 h-4 w-4" /> {t('addUserButton')}
               </Button>
             </div>
           </div>

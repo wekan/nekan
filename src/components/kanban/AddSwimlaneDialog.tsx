@@ -50,7 +50,7 @@ export function AddSwimlaneDialog({
       <DialogContent className="sm:max-w-[425px] bg-background">
         <DialogHeader>
           <DialogTitle className="flex items-center">
-             <PlusCircle className="mr-2 h-5 w-5" /> {t('addSwimlaneDialogTitle')}
+             <PlusCircle className="me-2 h-5 w-5" /> {t('addSwimlaneDialogTitle')}
           </DialogTitle>
           <DialogDescription>
             {t('addSwimlaneDialogDescription')}
@@ -58,7 +58,7 @@ export function AddSwimlaneDialog({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="swimlane-name" className="text-right col-span-1">
+            <Label htmlFor="swimlane-name" className="text-start col-span-1">
               {t('name')}
             </Label>
             <Input

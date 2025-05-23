@@ -110,7 +110,7 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
                         <Button
                           variant={"outline"}
                           className={cn(
-                            "w-full pl-3 text-left font-normal",
+                            "w-full ps-3 text-start font-normal", // Changed pl-3 to ps-3 and text-left to text-start
                             !field.value && "text-muted-foreground"
                           )}
                         >

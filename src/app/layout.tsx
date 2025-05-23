@@ -1,11 +1,11 @@
 import type {Metadata} from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
-import { Toaster } from "@/components/ui/toaster";
-import { I18nProvider } from '@/lib/i18n'; // Import I18nProvider
-import { headers } from 'next/headers'; // For reading headers server-side
+import { I18nProvider, type I18nProviderProps as TI18nProviderProps } from '@/lib/i18n';
+import { headers } from 'next/headers';
 import fs from 'fs/promises';
 import path from 'path';
+import LayoutContentClient from './layout-content'; // Import the client component
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -17,16 +17,12 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-// Metadata can't use hooks directly, so we'll handle dynamic titles/descriptions
-// differently if needed, or keep them static if globally applicable.
-// For now, let's assume these are static or will be handled within page components.
 export const metadata: Metadata = {
-  title: 'KanbanAI', // This will be static unless we move I18nProvider higher or handle differently
-  description: 'AI-Powered Kanban Board for optimal workflow efficiency.', // t('metaDescription')
+  title: 'KanbanAI',
+  description: 'AI-Powered Kanban Board for optimal workflow efficiency.',
 };
 
 async function getInitialLocaleData() {
-  // Dynamically determine available locales by reading the /public/locales directory
   let availableLocales: string[] = ['en']; // Default with 'en'
   try {
     const localesDir = path.join(process.cwd(), 'public', 'locales');
@@ -47,15 +43,6 @@ async function getInitialLocaleData() {
   const requestHeaders = await headers(); // Correctly get headers object by awaiting
   const acceptLanguage = requestHeaders.get('accept-language');
   let preferredLocale = 'en'; // Default locale
-
-  // TODO: Add logic to check user profile for saved language preference here
-  // This would typically involve fetching user data if a session exists.
-  // If user profile language is found and valid, it should override acceptLanguage.
-  // For example:
-  // const userProfileLang = await getUserProfileLang(); // Fictional function
-  // if (userProfileLang && availableLocales.includes(userProfileLang)) {
-  //   preferredLocale = userProfileLang;
-  // } else if (acceptLanguage) { ... }
 
   if (acceptLanguage) {
     const langs = acceptLanguage
@@ -106,24 +93,6 @@ async function getInitialLocaleData() {
   }
 }
 
-function LayoutContent({ children, lang }: { children: React.ReactNode, lang: string }) {
-  // If you need to translate metadata dynamically based on language,
-  // you would typically do this at the page level or use a more advanced i18n setup.
-  // For simplicity, we'll keep the static metadata for now.
-  // const { t } = useTranslation();
-  // metadata.title = t('metaTitle');
-  // metadata.description = t('metaDescription');
-
-  return (
-    <html lang={lang}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased font-sans`}>
-        {children}
-        <Toaster />
-      </body>
-    </html>
-  );
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -131,15 +100,19 @@ export default async function RootLayout({
 }>) {
   const { locale, messages } = await getInitialLocaleData();
 
-  // Explicitly define the props for I18nProvider
-  const i18nProviderProps = {
+  const fontVariables = `${geistSans.variable} ${geistMono.variable}`;
+
+  const i18nProviderProps: TI18nProviderProps = {
     initialLocale: locale,
     initialMessages: messages,
-    children: <LayoutContent lang={locale}>{children}</LayoutContent>,
+    children: (
+      <LayoutContentClient lang={locale} fontClassName={fontVariables}>
+        {children}
+      </LayoutContentClient>
+    ),
   };
 
   return (
-    // @ts-expect-error TODO: Investigate why I18nProvider props are not recognized despite being defined
     <I18nProvider {...i18nProviderProps} />
   );
 }

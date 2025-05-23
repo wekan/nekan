@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
+import { languagesData, Language as AppLanguage } from '@/lib/languages'; // Import languagesData and Language type
 
 // For now, LanguageCode is string. Consider creating a definitive list for type safety.
 export type LanguageCode = string;
@@ -10,11 +11,12 @@ export interface LanguageContextType {
   setLanguage: (lang: LanguageCode) => void;
   t: (key: string, params?: Record<string, string | number | undefined>) => string;
   isLoading: boolean;
+  isRTL: boolean; // Added isRTL flag
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-interface I18nProviderProps {
+export interface I18nProviderProps { // Add export keyword
   children: ReactNode;
   initialLocale?: LanguageCode;
   initialMessages?: Record<string, string>;
@@ -25,13 +27,11 @@ export const I18nProvider = ({ children, initialLocale, initialMessages }: I18nP
     if (initialLocale) return initialLocale;
     if (typeof window !== 'undefined') {
       const savedLang = localStorage.getItem('kanbanai-lang') as LanguageCode;
-      if (savedLang) return savedLang; // We'll validate if translations exist later
+      if (savedLang) return savedLang;
       if (navigator.languages && navigator.languages.length) {
         for (const navLang of navigator.languages) {
-          const baseLang = navLang.split('-')[0];
-          // We can't check translations[navLang] here as it's not loaded yet
-          // So, we just return the preferred one and try to load it.
-          return navLang; // Or baseLang if you prefer broader matching first
+          // const baseLang = navLang.split('-')[0];
+          return navLang;
         }
       }
     }
@@ -46,7 +46,19 @@ export const I18nProvider = ({ children, initialLocale, initialMessages }: I18nP
   });
   const [isLoading, setIsLoading] = useState<boolean>(!initialMessages && !Object.keys(currentTranslations).length);
 
+  const [isRTL, setIsRTL] = useState<boolean>(() => {
+    const effectiveInitialLocale = initialLocale || (typeof window !== 'undefined' ? localStorage.getItem('kanbanai-lang') : null) || 'en';
+    const langData = languagesData[effectiveInitialLocale] || languagesData[effectiveInitialLocale.split('-')[0]];
+    return langData?.rtl === 'true';
+  });
+
   useEffect(() => {
+    const currentLangData = languagesData[language] || languagesData[language.split('-')[0]];
+    const newIsRTL = currentLangData?.rtl === 'true';
+    if (newIsRTL !== isRTL) { // Only set if changed to avoid unnecessary re-renders
+        setIsRTL(newIsRTL);
+    }
+
     const fetchTranslations = async (langToLoad: LanguageCode) => {
       // Skip fetching if initialMessages were provided for the current language
       if (langToLoad === initialLocale && initialMessages && Object.keys(initialMessages).length > 0) {
@@ -125,17 +137,13 @@ export const I18nProvider = ({ children, initialLocale, initialMessages }: I18nP
             fetchTranslations(language);
         }
     }
-  }, [language, initialLocale, initialMessages]); // Rerun when language or initial props change
+  }, [language, initialLocale, initialMessages, isRTL]); // Added isRTL to dependency array
 
   const setLanguage = useCallback((lang: LanguageCode) => {
-    // Clear initialMessages when language is changed by user, so we fetch new ones
-    // This is a bit of a conceptual reset; the effect on `language` change handles fetching.
-    // initialLocale = undefined; // This would require initialLocale to be a state or mutable prop
-    // initialMessages = undefined; // Same as above
-    // A simpler way is to just let the useEffect handle it by changing `language`
     setLanguageState(lang);
-    setCurrentTranslations({}); // Clear old translations immediately
-    setIsLoading(true); // Set loading state until new translations are fetched
+    setCurrentTranslations({});
+    setIsLoading(true);
+    // RTL status will be updated by the useEffect when `language` changes.
   }, []);
 
   const t = useCallback((key: string, params?: Record<string, string | number | undefined>): string => {
@@ -166,7 +174,7 @@ export const I18nProvider = ({ children, initialLocale, initialMessages }: I18nP
   }, [currentTranslations, isLoading]);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, isLoading, isRTL }}>
       {children}
     </LanguageContext.Provider>
   );

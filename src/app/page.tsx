@@ -11,7 +11,7 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="p-4 border-b border-border shadow-sm sticky top-0 bg-background z-10">
         <div className="container mx-auto flex items-center">
-          <Atom className="h-8 w-8 text-primary mr-2" />
+          <Atom className="h-8 w-8 text-primary me-2" />
           <h1 className="text-3xl font-bold text-primary">{t('appTitle')}</h1>
         </div>
       </header>
