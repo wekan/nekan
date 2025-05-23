@@ -2,78 +2,160 @@
 
 import React, { useState, useCallback, useEffect, createContext, useContext, ReactNode } from 'react';
 
-import enTranslations from './en.i18n.json';
-
-const translations: Record<string, Record<string, string>> = {
-  en: enTranslations,
-  // Other languages would be imported and added here
-  // Example:
-  // import esTranslations from './es.i18n.json';
-  // es: esTranslations,
-};
-
-export type LanguageCode = keyof typeof translations;
+// For now, LanguageCode is string. Consider creating a definitive list for type safety.
+export type LanguageCode = string;
 
 export interface LanguageContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
   t: (key: string, params?: Record<string, string | number | undefined>) => string;
+  isLoading: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export const I18nProvider = ({ children }: { children: ReactNode }) => {
+interface I18nProviderProps {
+  children: ReactNode;
+  initialLocale?: LanguageCode;
+  initialMessages?: Record<string, string>;
+}
+
+export const I18nProvider = ({ children, initialLocale, initialMessages }: I18nProviderProps) => {
   const [language, setLanguageState] = useState<LanguageCode>(() => {
+    if (initialLocale) return initialLocale;
     if (typeof window !== 'undefined') {
       const savedLang = localStorage.getItem('kanbanai-lang') as LanguageCode;
-      return savedLang && translations[savedLang] ? savedLang : 'en';
+      if (savedLang) return savedLang; // We'll validate if translations exist later
+      if (navigator.languages && navigator.languages.length) {
+        for (const navLang of navigator.languages) {
+          const baseLang = navLang.split('-')[0];
+          // We can't check translations[navLang] here as it's not loaded yet
+          // So, we just return the preferred one and try to load it.
+          return navLang; // Or baseLang if you prefer broader matching first
+        }
+      }
     }
     return 'en'; // Default language
   });
 
-  const [currentTranslations, setCurrentTranslations] = useState<Record<string, string>>(
-    () => translations[language] || translations.en
-  );
+  const [currentTranslations, setCurrentTranslations] = useState<Record<string, string>>(() => {
+    if (initialLocale === language && initialMessages) {
+      return initialMessages;
+    }
+    return {};
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(!initialMessages && !Object.keys(currentTranslations).length);
 
-  // Effect to update currentTranslations when the language state changes
   useEffect(() => {
-    setCurrentTranslations(translations[language] || translations.en);
-  }, [language]);
+    const fetchTranslations = async (langToLoad: LanguageCode) => {
+      // Skip fetching if initialMessages were provided for the current language
+      if (langToLoad === initialLocale && initialMessages && Object.keys(initialMessages).length > 0) {
+        setCurrentTranslations(initialMessages);
+        setIsLoading(false);
+        return;
+      }
+
+      // Skip fetching if translations are already loaded for the current language
+      // (This check might be redundant if setCurrentTranslations({}) is used before fetch)
+      if (Object.keys(currentTranslations).length > 0 && !initialMessages) {
+          // This case implies translations were loaded for a *previous* language,
+          // and now language changed, so we need to fetch new ones.
+          // Or, initialMessages were not provided, and we haven't loaded yet.
+      }
+
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/locales/${langToLoad}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch translations for ${langToLoad}: ${response.statusText}`);
+        }
+        const data: Record<string, string> = await response.json();
+        setCurrentTranslations(data);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('kanbanai-lang', langToLoad);
+        }
+      } catch (error) {
+        console.warn(`Error loading translations for ${langToLoad}. Falling back.`, error);
+        // Fallback logic: try base language or English
+        const baseLang = langToLoad.split('-')[0];
+        if (baseLang !== langToLoad && baseLang !== 'en') {
+          try {
+            const fallbackResponse = await fetch(`/api/locales/${baseLang}`);
+            if (fallbackResponse.ok) {
+              const fallbackData = await fallbackResponse.json();
+              setCurrentTranslations(fallbackData);
+              setLanguageState(baseLang); // Update language state to the fallback
+               if (typeof window !== 'undefined') {
+                 localStorage.setItem('kanbanai-lang', baseLang);
+               }
+              return; // Exit after successful fallback
+            }
+          } catch (fallbackError) {
+            console.warn(`Error loading fallback translations for ${baseLang}.`, fallbackError);
+          }
+        }
+        // Ultimate fallback to English if base language also fails or was English
+        if (langToLoad !== 'en') { // Avoid infinite loop if 'en' fails
+            const enResponse = await fetch('/api/locales/en');
+            if (enResponse.ok) {
+                const enData = await enResponse.json();
+                setCurrentTranslations(enData);
+            } else {
+                 setCurrentTranslations({}); // No translations available
+            }
+            setLanguageState('en'); // Update language state to 'en'
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('kanbanai-lang', 'en');
+            }
+        } else {
+            setCurrentTranslations({}); // English failed, clear translations
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (language) {
+        // Only fetch if we don't have initialMessages for the current language
+        if (language === initialLocale && initialMessages && Object.keys(initialMessages).length > 0) {
+            setCurrentTranslations(initialMessages);
+            setIsLoading(false);
+        } else {
+            fetchTranslations(language);
+        }
+    }
+  }, [language, initialLocale, initialMessages]); // Rerun when language or initial props change
 
   const setLanguage = useCallback((lang: LanguageCode) => {
-    if (translations[lang]) {
-      setLanguageState(lang);
-      // currentTranslations will be updated by the useEffect hook above
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('kanbanai-lang', lang);
-      }
-    } else {
-      setLanguageState('en');
-      // currentTranslations will be updated by the useEffect hook above
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('kanbanai-lang', 'en');
-      }
-      console.warn("Translations for language " + lang + " not found. Falling back to English.");
-    }
-  }, []); // setLanguageState is stable
+    // Clear initialMessages when language is changed by user, so we fetch new ones
+    // This is a bit of a conceptual reset; the effect on `language` change handles fetching.
+    // initialLocale = undefined; // This would require initialLocale to be a state or mutable prop
+    // initialMessages = undefined; // Same as above
+    // A simpler way is to just let the useEffect handle it by changing `language`
+    setLanguageState(lang);
+    setCurrentTranslations({}); // Clear old translations immediately
+    setIsLoading(true); // Set loading state until new translations are fetched
+  }, []);
 
   const t = useCallback((key: string, params?: Record<string, string | number | undefined>): string => {
-    let translation = currentTranslations[key] || key; // Fallback to key if translation not found
+    if (isLoading && !Object.keys(currentTranslations).length) {
+      // Optionally return a loading indicator or the key itself
+      // For SSR, if initialMessages are provided, isLoading should be false initially.
+      return key; // Or '...' or some placeholder
+    }
+    let translation = currentTranslations[key] || key;
 
     if (params) {
-      // Replace __param__ style placeholders
       Object.entries(params).forEach(([paramKey, paramValue]) => {
         if (paramValue !== undefined) {
           translation = translation.replace(new RegExp(`__${paramKey}__`, 'g'), String(paramValue));
-          // Also support {param} style placeholders
           translation = translation.replace(new RegExp(`{${paramKey}}`, 'g'), String(paramValue));
         }
       });
-
-      // Replace %s style placeholders sequentially
       if (typeof params === 'object' && params !== null) {
         let paramIndex = 0;
-        const paramKeys = Object.keys(params); // Maintain order for %s if params is an object
+        const paramKeys = Object.keys(params);
         translation = translation.replace(/%s/g, () => {
           const val = paramIndex < paramKeys.length ? params[paramKeys[paramIndex++]] : undefined;
           return val !== undefined ? String(val) : '%s';
@@ -81,12 +163,10 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       }
     }
     return translation;
-  }, [currentTranslations]);
-
-  const providerValue = { language, setLanguage, t };
+  }, [currentTranslations, isLoading]);
 
   return (
-    <LanguageContext.Provider value={providerValue}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, isLoading }}>
       {children}
     </LanguageContext.Provider>
   );
