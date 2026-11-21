@@ -129,7 +129,7 @@ export function CreateCardForm({ isOpen, onOpenChange, onSubmit }: CreateCardFor
                         selected={field.value}
                         onSelect={field.onChange}
                         disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
-                        initialFocus
+                        autoFocus
                       />
                     </PopoverContent>
                   </Popover>

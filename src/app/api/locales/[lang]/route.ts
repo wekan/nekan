@@ -5,12 +5,11 @@ import fs from 'fs/promises';
 
 export async function GET(
   request: Request,
-  { params }: { params: { lang: string } }
+  { params }: { params: Promise<{ lang: string }> }
 ) {
-  // The params object itself doesn't need to be awaited here.
-  // The error message might be a bit misleading in this context for route handlers.
-  // Accessing params.lang directly is standard practice in Next.js App Router route handlers.
-  const lang = params.lang;
+  // Since Next.js 15 the route params are a Promise, and since Next.js 16
+  // they can no longer be read synchronously.
+  const { lang } = await params;
   try {
     // Construct the path to the locale file in the public directory
     const filePath = path.join(process.cwd(), 'public', 'locales', `${lang}.i18n.json`);

@@ -42,7 +42,7 @@ export function BoardHeader({ boardName, onRankCards, onShareBoard, isRanking }:
   };
 
   return (
-    <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-lg shadow">
+    <div className="flex items-center justify-between mb-6 p-4 bg-card rounded-lg shadow-sm">
       <h2 className="text-2xl font-bold text-foreground">{boardName}</h2>
       <div className="flex items-center space-x-3">
         <TooltipProvider>

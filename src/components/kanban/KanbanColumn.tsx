@@ -45,7 +45,7 @@ export function KanbanColumn({
 
   return (
     <div
-      className="flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full"
+      className="flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-xs h-full"
       style={columnStyle}
       onDragOver={handleDragOver}
       onDrop={(e) => onDropTask(e, column.id)}

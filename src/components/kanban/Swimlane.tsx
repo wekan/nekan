@@ -132,7 +132,7 @@ export function Swimlane({ // Renamed component
     onAddSwimlaneFromTemplate(swimlane.id);
   };
 
-  const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 flex-shrink-0";
+  const listPlaceholderStyle = "w-80 min-w-80 h-full min-h-[150px] bg-background border-2 border-foreground border-dashed rounded-lg opacity-75 mx-1 shrink-0";
   
   const listsToRender = lists.filter(l => l.id !== draggingListId);
 

@@ -101,7 +101,7 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
             className={cn("flex-1 min-w-0 cursor-grab group-hover/card:opacity-100 transition-opacity", textColorClass)}
             aria-label={t('dragCardAriaLabel', { cardTitle: card.title })}
           >
-            <CardTitle className={cn("text-base font-semibold break-words", textColorClass)}>
+            <CardTitle className={cn("text-base font-semibold wrap-break-word", textColorClass)}>
               {card.title}
             </CardTitle>
           </div>
@@ -153,7 +153,7 @@ export function Card({ card, isDragging, onDragStart, onDragEnd, onOpenCard, onS
         </CardHeader>
         {card.description && (
           <CardContent className="p-0 mb-2" onClick={handleCardClick} style={{cursor: 'pointer'}}>
-            <p className={cn("text-sm break-words", card.color && !isColorLight(card.color) ? "text-gray-200" : "text-muted-foreground")}>{card.description}</p>
+            <p className={cn("text-sm wrap-break-word", card.color && !isColorLight(card.color) ? "text-gray-200" : "text-muted-foreground")}>{card.description}</p>
           </CardContent>
         )}
         {displayDeadline && (

@@ -88,7 +88,7 @@ export function List({ // Renamed component
       />
       <div
         className={cn(
-          "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-sm h-full relative",
+          "flex flex-col w-80 min-w-80 bg-muted/60 rounded-lg shadow-xs h-full relative",
           draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : ""
         )}
         style={listStyle}

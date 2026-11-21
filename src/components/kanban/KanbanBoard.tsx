@@ -163,7 +163,7 @@ export function KanbanBoard() {
 
     setBoard(prevBoard => {
       const newBoardSwimlanes = { ...prevBoard.swimlanes, [newSwimlaneId]: newSwimlane };
-      let newSwimlaneOrder = [...prevBoard.swimlaneOrder];
+      const newSwimlaneOrder = [...prevBoard.swimlaneOrder];
       const referenceIndex = newSwimlaneOrder.indexOf(referenceSwimlaneId);
 
       if (referenceIndex === -1) { 
@@ -218,7 +218,7 @@ export function KanbanBoard() {
       const newSwimlanes = { ...prevBoard.swimlanes };
       delete newSwimlanes[swimlaneId];
       
-      let newSwimlaneOrder = prevBoard.swimlaneOrder.filter(id => id !== swimlaneId);
+      const newSwimlaneOrder = prevBoard.swimlaneOrder.filter(id => id !== swimlaneId);
       
       newSwimlaneOrder.forEach((sId, index) => {
         if (newSwimlanes[sId]) {
@@ -294,7 +294,7 @@ export function KanbanBoard() {
       const newListsState = { ...newBoardState.lists };
       const newCardsState = { ...newBoardState.cards }; 
   
-      let sourceListCardIdsCopy = [...newListsState[currentSourceListId].cardIds]; 
+      const sourceListCardIdsCopy = [...newListsState[currentSourceListId].cardIds]; 
       
       if (currentSourceListId === currentTargetListId) {
         const cardIndexInSource = sourceListCardIdsCopy.indexOf(movedCardId);
@@ -309,7 +309,7 @@ export function KanbanBoard() {
         newListsState[currentSourceListId] = { ...newListsState[currentSourceListId], cardIds: sourceListCardIdsCopy };
       }
       
-      let finalCardIdsForTargetList = (currentSourceListId === currentTargetListId)
+      const finalCardIdsForTargetList = (currentSourceListId === currentTargetListId)
         ? sourceListCardIdsCopy
         : (newListsState[currentTargetListId] ? [...newListsState[currentTargetListId].cardIds] : []);
 
@@ -391,7 +391,7 @@ export function KanbanBoard() {
 
     setBoard(prevBoard => {
       const newBoardSwimlanes = { ...prevBoard.swimlanes };
-      let newSwimlaneOrder = [...prevBoard.swimlaneOrder];
+      const newSwimlaneOrder = [...prevBoard.swimlaneOrder];
       
       const sourceIndex = newSwimlaneOrder.indexOf(movedSwimlaneId);
       if (sourceIndex === -1) return prevBoard; 
@@ -473,12 +473,12 @@ export function KanbanBoard() {
 
     setBoard(prevBoard => {
       const newBoard = { ...prevBoard };
-      let newSwimlanes = { ...newBoard.swimlanes };
-      let newListsData = { ...newBoard.lists }; 
+      const newSwimlanes = { ...newBoard.swimlanes };
+      const newListsData = { ...newBoard.lists }; 
 
       if (!newSwimlanes[sourceSwimlaneId] || !newSwimlanes[targetSwimlaneId]) return prevBoard;
 
-      let sourceListIdsCopy = [...newSwimlanes[sourceSwimlaneId].listIds];
+      const sourceListIdsCopy = [...newSwimlanes[sourceSwimlaneId].listIds];
       let targetListIdsEffectiveCopy;
 
       const indexInSource = sourceListIdsCopy.indexOf(movedListId);
@@ -558,12 +558,12 @@ export function KanbanBoard() {
 
     setBoard(prevBoard => {
       const newBoard = { ...prevBoard };
-      let newSwimlanes = { ...newBoard.swimlanes };
-      let newListsData = { ...newBoard.lists }; 
+      const newSwimlanes = { ...newBoard.swimlanes };
+      const newListsData = { ...newBoard.lists }; 
 
       if (!newSwimlanes[sourceSwimlaneId] || !newSwimlanes[targetSwimlaneId]) return prevBoard;
 
-      let sourceListIdsCopy = [...newSwimlanes[sourceSwimlaneId].listIds];
+      const sourceListIdsCopy = [...newSwimlanes[sourceSwimlaneId].listIds];
       let targetListIdsEffectiveCopy;
       
       const indexInSource = sourceListIdsCopy.indexOf(movedListId);

@@ -132,7 +132,7 @@ export function KanbanList({
       <div
         ref={listRef}
         className={cn(
-          "flex flex-col w-80 min-w-80 rounded-lg shadow-sm h-full relative",
+          "flex flex-col w-80 min-w-80 rounded-lg shadow-xs h-full relative",
           draggingListId === list.id ? "opacity-50 ring-2 ring-primary" : "",
           list.color ? "" : "bg-muted/60" // Apply default bg only if no color is set
         )}

@@ -109,7 +109,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
             className="flex-1 min-w-0 cursor-grab group-hover/taskcard:opacity-100 transition-opacity"
             aria-label={`Drag task ${task.title}`}
           >
-            <CardTitle className="text-base font-semibold break-words">
+            <CardTitle className="text-base font-semibold wrap-break-word">
               {task.title}
             </CardTitle>
           </div>
@@ -142,7 +142,7 @@ export function TaskCard({ task, isDragging, onDragStart, onDragEnd, onOpenCard,
         </CardHeader>
         {task.description && (
           <CardContent className="p-0 mb-2" onClick={handleCardClick} style={{cursor: 'pointer'}}>
-            <p className="text-sm text-muted-foreground break-words">{task.description}</p>
+            <p className="text-sm text-muted-foreground wrap-break-word">{task.description}</p>
           </CardContent>
         )}
         {displayDeadline && (
