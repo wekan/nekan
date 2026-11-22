@@ -1,0 +1,8 @@
+{
+  "name": "@genkit-ai/firebase",
+  "version": "0.0.0-disabled",
+  "description": "Stands in for the optional @genkit-ai/firebase plugin of @genkit-ai/core, which Nekan does not use. The real plugin pins OpenTelemetry 1.25 through @genkit-ai/google-cloud, with known vulnerabilities and no fixed release. See README.md.",
+  "private": true,
+  "license": "MIT",
+  "main": "index.js"
+}
